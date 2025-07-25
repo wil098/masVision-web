@@ -8,7 +8,7 @@ const HeroSection = () => {
         {/* Imagen para móvil (solo se muestra en mobile) */}
         <div className="md:hidden w-full">
           <img
-            src="./public/img/family.png" // ← cambia por tu ruta de imagen móvil
+            src="./img/family.png" // ← cambia por tu ruta de imagen móvil
             alt="Óptica móvil"
             className="w-full h-auto object-cover rounded-t-3xl"
           />
@@ -36,7 +36,7 @@ const HeroSection = () => {
         {/* Imagen para desktop */}
         <div className="hidden md:block w-full md:w-1/2 h-full">
           <img
-            src="./public/img/family.png" // ← cambia por tu ruta de imagen desktop
+            src="./img/family.png" // ← cambia por tu ruta de imagen desktop
             alt="Óptica"
             className="w-full h-full object-cover rounded-r-3xl"
           />
