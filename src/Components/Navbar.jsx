@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Glasses, GlassesIcon, Home, MapIcon, Menu, Percent, Sun, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { GlassesIcon, Home, MapIcon, Menu, Percent, Sun, X } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -16,17 +17,25 @@ const Navbar = () => {
             alt="Óptica Más Visión"
             className="h-16 w-auto object-contain"
           />
-         
         </div>
 
         {/* Desktop links */}
         <div className="hidden md:flex space-x-8 text-gray-700 font-medium">
-          <a href="#inicio" className="hover:text-cyan-600 gap-2 inline-flex"><Home/> Inicio</a>
-          <a href="#lentes" className="hover:text-cyan-600 gap-2 inline-flex"><Sun/>Lentes de sol</a>
-          <a href="#aros" className="hover:text-cyan-600 gap-2 inline-flex"><GlassesIcon/>Aros</a>
-          <a href="#sucursales" className="hover:text-cyan-600 inline-flex gap-2"> <MapIcon/>  Sucursales </a>
-          <a href="#ofertas" className="hover:text-cyan-600 gap-2 inline-flex"><Percent/> Ofertas</a>
-         
+          <Link to="/" className="hover:text-cyan-600 gap-2 inline-flex">
+            <Home /> Inicio
+          </Link>
+          <Link to="/aros-de-sol" className="hover:text-cyan-600 gap-2 inline-flex">
+            <Sun /> Lentes de sol
+          </Link>
+          <Link to="/aros-oftalmicos" className="hover:text-cyan-600 gap-2 inline-flex">
+            <GlassesIcon /> Aros
+          </Link>
+          <Link to="/sucursales" className="hover:text-cyan-600 inline-flex gap-2">
+            <MapIcon /> Sucursales
+          </Link>
+          <Link to="/ofertas" className="hover:text-cyan-600 gap-2 inline-flex">
+            <Percent /> Ofertas
+          </Link>
         </div>
 
         {/* Call to action */}
@@ -48,11 +57,37 @@ const Navbar = () => {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden bg-white shadow-md px-4 pb-4 space-y-2 text-gray-700 font-medium flex flex-col">
-          <a href="#inicio" className="hover:text-cyan-600 gap-2 inline-flex"><Home/> Inicio</a>
-          <a href="#lentes" className="hover:text-cyan-600 gap-2 inline-flex"><Sun/>Lentes de sol</a>
-          <a href="#aros" className="hover:text-cyan-600 gap-2 inline-flex"><GlassesIcon/>Aros</a>
-          <a href="#sucursales" className="hover:text-cyan-600 gap-2 inline-flex"> <MapIcon/>  Sucursales </a>
-          <a href="#ofertas" className="hover:text-cyan-600 gap-2 inline-flex"><Percent/> Ofertas</a>
+          <Link to="/" onClick={() => setOpen(false)} className="hover:text-cyan-600 gap-2 inline-flex">
+            <Home /> Inicio
+          </Link>
+          <Link
+            to="/aros-de-sol"
+            onClick={() => setOpen(false)}
+            className="hover:text-cyan-600 gap-2 inline-flex"
+          >
+            <Sun /> Lentes de sol
+          </Link>
+          <Link
+            to="/aros-oftalmicos"
+            onClick={() => setOpen(false)}
+            className="hover:text-cyan-600 gap-2 inline-flex"
+          >
+            <GlassesIcon /> Aros
+          </Link>
+          <Link
+            to="/sucursales"
+            onClick={() => setOpen(false)}
+            className="hover:text-cyan-600 gap-2 inline-flex"
+          >
+            <MapIcon /> Sucursales
+          </Link>
+          <Link
+            to="/ofertas"
+            onClick={() => setOpen(false)}
+            className="hover:text-cyan-600 gap-2 inline-flex"
+          >
+            <Percent /> Ofertas
+          </Link>
           <a
             href="https://wa.me/50371234567?text=Hola, quiero agendar una cita en Óptica Más Visión"
             target="_blank"

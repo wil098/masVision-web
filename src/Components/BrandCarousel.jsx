@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 
 export const logos = [
   "https://gildieyewear.com/wp-content/uploads/GildiEyewearLogo.png",
-  "https://cdn.freebiesupply.com/logos/large/2x/emporio-armani-2-logo-png-transparent.png",
-
-  "https://cdn.freebiesupply.com/logos/large/2x/new-balance-3-logo-png-transparent.png",
-   "https://cdn.freebiesupply.com/logos/large/2x/converse-logo3-logo-png-transparent.png",
+  "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Ray-Ban_logo.svg/2880px-Ray-Ban_logo.svg.png",
+  "https://upload.wikimedia.org/wikipedia/commons/e/e2/CK_Calvin_Klein_logo.svg",
 ];
 
 const BrandCarousel = () => {
@@ -22,7 +21,7 @@ const BrandCarousel = () => {
       const width = window.innerWidth;
       if (width < 640) setVisible(1); // móviles
       else if (width < 1024) setVisible(2); // tablets
-      else setVisible(3); // desktop
+      else setVisible(3); // desktop  
     };
 
     updateVisible();
