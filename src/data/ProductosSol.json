@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Aro Modelo Roma 320",
+    "description": "Aro metálico color dorado, unisex, estilo clásico.",
+    "price": 34.99,
+    "brand": "Roma",
+    "images": [
+      "/assets/roma1.jpg",
+      "/assets/roma2.jpg",
+      "/assets/roma3.jpg"
+    ]
+  }
+]

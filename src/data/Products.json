@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Aro Izote - Gildi",
+    "description": "Material: TN85plus, unisex, estilo moderno.",
+    "price": 69.99,
+    "brand": "Gildi.",
+    "images": [
+      "https://gildieyewear.com/wp-content/uploads/G250685-C14-1-1.jpg",
+      "https://gildieyewear.com/wp-content/uploads/G250685-C14-2-1.jpg"
+    ]
+  },
+  {
+    "name": "DUNAMIS EVO - Adidas",
+    "description": "Material: Injected. Hombre. - Aro de Sol deportivo.",
+    "price": 174.99,
+    "brand": "Adidas.",
+    "images": [
+      "https://www.adidaseyewear.com/cdn/shop/files/SP0106_02G_01.jpg?v=1740125808",
+      "https://www.adidaseyewear.com/cdn/shop/files/SP0106_02G_02.jpg?v=1740125806",
+      "https://www.adidaseyewear.com/cdn/shop/files/SP0106_02G_04.jpg?v=1740125806"
+    ]
+  },
+  {
+    "name": "ROUND METALs - Ray-Ban",
+    "description": "Aro metálico color dorado, Mujer, 15 colores.",
+    "price": 34.99,
+    "brand": "Roma",
+    "images": [
+      "https://images2.ray-ban.com//cdn-record-files-pi/03dba9c3-74d4-41b4-ae64-b20600420a41/10e23dd8-7b88-441e-a521-b20600420d51/0RX3447V__3188__P21__shad__qt.png?impolicy=RB_Product_clone&width=1440&bgc=%23f2f2f2",
+      "https://images2.ray-ban.com//cdn-record-files-pi/03dba9c3-74d4-41b4-ae64-b20600420a41/8ad060dd-1689-4ea6-aca4-b206004211dd/0RX3447V__3188__P21__shad__lt.png?impolicy=RB_Product_clone&width=1440&bgc=%23f2f2f2",
+      "/assets/roma344.jpg"
+    ]
+  }
+]
