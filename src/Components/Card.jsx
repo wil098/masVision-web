@@ -1,10 +1,25 @@
+<<<<<<< HEAD
 import { MessageCircle, Eye } from 'lucide-react'
 
 export default function Card({ product }) {
+=======
+import { MessageCircle, Eye, ShoppingCart } from 'lucide-react'
+import { useCart } from '../context/CartContext'
+
+export default function Card({ product }) {
+  const { addToCart } = useCart()
+
+>>>>>>> origin/main
   if (!product) return null
 
   const { name, description, price, brand, images } = product
   
+<<<<<<< HEAD
+=======
+  // Si tu JSON no tiene un campo 'id', usamos el nombre como identificador único para el carrito
+  const id = product.id || name
+
+>>>>>>> origin/main
   const whatsappNumber = '50371497972'
   const whatsappMessage = `Hola! Me interesa el modelo *${name}* de ${brand}. Precio: $${price}`
   const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
@@ -56,6 +71,7 @@ export default function Card({ product }) {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Botón de WhatsApp mejorado */}
         <a
           href={whatsappURL}
@@ -66,6 +82,30 @@ export default function Card({ product }) {
           <MessageCircle size={20} />
           Consultar por WhatsApp
         </a>
+=======
+        {/* Bloque de Acciones */}
+        <div className="flex flex-col gap-2">
+          {/* Botón de Agregar al Carrito */}
+          <button
+            onClick={() => addToCart({ id, name, price, brand, image: images?.[0] })}
+            className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
+          >
+            <ShoppingCart size={20} />
+            Agregar al Carrito
+          </button>
+
+          {/* Botón de WhatsApp mejorado */}
+          <a
+            href={whatsappURL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
+          >
+            <MessageCircle size={20} />
+            Consultar por WhatsApp
+          </a>
+        </div>
+>>>>>>> origin/main
       </div>
     </div>
   )

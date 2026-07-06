@@ -14,12 +14,20 @@ const HeroSection = () => {
             <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 text-slate-800">
               <div className="inline-block bg-slate-100 px-4 py-1 rounded-full mb-6">
                 <p className="text-sm font-medium text-slate-600">
+<<<<<<< HEAD
                   Promoción especial Back to School
+=======
+                  Promoción Mundialista 2026
+>>>>>>> origin/main
                 </p>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight mb-6 leading-tight">
+<<<<<<< HEAD
                 Que nada detenga
+=======
+                No miras claro el gol?
+>>>>>>> origin/main
                 <span className="block text-slate-500">
                   Tu aprendizaje
                 </span>

@@ -1,10 +1,11 @@
-import { Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
-import ArosSol from './pages/ArosSol'
-import ArosOftalmicos from './pages/ArosOftalmicos'
-import Ofertas from './pages/Ofertas'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
+import { Routes, Route } from 'react-router-dom';
+import Home from './Pages/Home';
+import ArosSol from './Pages/ArosSol';
+import ArosOftalmicos from './Pages/ArosOftalmicos';
+import Ofertas from './Pages/Ofertas';
+import Navbar from './Components/Navbar';
+import Footer from './Components/Footer';
+import { CartProvider } from './context/CartContext';
 
 // CORRECCIÓN 1: Asegúrate de que la palabra "pages" esté en minúscula 
 // si tu carpeta general se llama así (tenías './Pages/Sucursales')
@@ -12,7 +13,7 @@ import Sucursales from './pages/Sucursales'
 
 export default function App() {
   return (
-    <>
+    <CartProvider>
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -24,6 +25,6 @@ export default function App() {
         <Route path="/sucursales" element={<Sucursales />} />
       </Routes>
       <Footer />
-    </>
-  )
+    </CartProvider>
+  );
 }
