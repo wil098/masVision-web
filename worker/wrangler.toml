@@ -1,0 +1,45 @@
+name = "masvision-order-email"
+main = "src/index.js"
+compatibility_date = "2026-07-27"
+
+# Variables públicas (no sensibles). El API key de Resend NO va aquí:
+# se configura como secreto con `wrangler secret put RESEND_API_KEY`.
+[vars]
+FROM_EMAIL = "onboarding@resend.dev"
+DESTINATION_EMAIL = "wilfredoangel1@gmail.com"
+ALLOWED_ORIGINS = "https://wil098.github.io,http://localhost:5173,https://masvision-web-preview.pages.dev"
+WOMPI_ID_BASE_URL = "https://id.wompi.sv"
+WOMPI_API_BASE_URL = "https://api.wompi.sv"
+PROJECT_ID = "masvision-web"
+PUBLIC_JWK_CACHE_KEY = "firebase-public-jwk-cache"
+
+# Almacena pedidos pendientes de pago (datos del cliente + receta en base64)
+# mientras el cliente completa el pago en Wompi. Se borran tras confirmarse
+# por webhook, o expiran solos (ver expirationTtl en el código).
+[[kv_namespaces]]
+binding = "ORDERS_KV"
+id = "4c24764f9a464e779fee19e9d6bc292d"
+
+# Cachea las llaves públicas de Firebase usadas para verificar los ID tokens
+# de los clientes que inician sesión (ver worker/src/auth.js).
+[[kv_namespaces]]
+binding = "FIREBASE_JWK_CACHE_KV"
+id = "98d49fa3d53c4a3fb7a58a4736954eea"
+
+# Registro permanente de pedidos (historial consultable), independiente de
+# la caché temporal de arriba.
+[[d1_databases]]
+binding = "DB"
+database_name = "masvision-orders"
+database_id = "7cd1e1ad-87de-4562-90f3-d322838e8651"
+
+# Imágenes de productos subidas desde el panel de administración, servidas
+# por el propio Worker en GET /images/:key.
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "masvision-product-images"
+
+# Logs estructurados visibles en el dashboard de Cloudflare (Workers & Pages
+# > masvision-order-email > Logs), no solo en tiempo real con `wrangler tail`.
+[observability]
+enabled = true

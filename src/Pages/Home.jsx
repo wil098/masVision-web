@@ -1,14 +1,27 @@
+import { useEffect, useState } from 'react'
 import HeroSection from '../components/HeroSection'
 import BrandCarousel from '../components/BrandCarousel'
+import CategoryLinks from '../components/CategoryLinks'
 import Card from '../components/Card'
-import products from '../data/products.json'
+import { fetchProducts } from '../lib/orderService'
 
 export default function Home() {
+  const [productos, setProductos] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchProducts({ destacado: true })
+      .then(setProductos)
+      .catch((err) => console.error('Error cargando el catálogo:', err))
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <div className="min-h-screen">
       <HeroSection />
       <BrandCarousel />
-      
+      <CategoryLinks />
+
       {/* Sección de productos */}
       <section id="productos" className="bg-gradient-to-b from-gray-50 to-white py-16 px-4">
         <div className="max-w-7xl mx-auto">
@@ -20,12 +33,16 @@ export default function Home() {
               Descubre nuestra selección de lentes de las mejores marcas internacionales
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-            {products.map((item, index) => (
-              <Card key={index} product={item} />
-            ))}
-          </div>
+
+          {loading ? (
+            <p className="text-center text-gray-400">Cargando catálogo...</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+              {productos.map((item) => (
+                <Card key={item.codigo} product={item} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

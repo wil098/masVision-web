@@ -1,25 +1,18 @@
-<<<<<<< HEAD
-import { MessageCircle, Eye } from 'lucide-react'
-
-export default function Card({ product }) {
-=======
+import { Link } from 'react-router-dom'
 import { MessageCircle, Eye, ShoppingCart } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 
 export default function Card({ product }) {
   const { addToCart } = useCart()
 
->>>>>>> origin/main
   if (!product) return null
 
-  const { name, description, price, brand, images } = product
-  
-<<<<<<< HEAD
-=======
-  // Si tu JSON no tiene un campo 'id', usamos el nombre como identificador único para el carrito
-  const id = product.id || name
+  const { name, description, price, brand, images, codigo } = product
 
->>>>>>> origin/main
+  // El código de producto es la llave real en D1; el Worker la usa para
+  // recalcular el precio del pedido, así que el carrito debe llevarla.
+  const id = codigo
+
   const whatsappNumber = '50371497972'
   const whatsappMessage = `Hola! Me interesa el modelo *${name}* de ${brand}. Precio: $${price}`
   const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
@@ -27,7 +20,10 @@ export default function Card({ product }) {
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 w-full max-w-[340px] group">
       {/* Imagen con efecto hover mejorado */}
-      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+      <Link
+        to={`/producto/${codigo}`}
+        className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 cursor-pointer block"
+      >
         <img
           src={images?.[0]}
           alt={name}
@@ -40,27 +36,29 @@ export default function Card({ product }) {
             className="absolute inset-0 w-full h-full object-contain p-4 opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3"
           />
         )}
-        
+
         {/* Badge de marca */}
         <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-md">
           <span className="text-xs font-bold text-cyan-600">{brand}</span>
         </div>
-        
+
         {/* Overlay con ícono */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
           <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={32} />
         </div>
-      </div>
+      </Link>
 
       {/* Contenido */}
       <div className="p-5">
         <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1 group-hover:text-cyan-600 transition-colors">
-          {name}
+          <Link to={`/producto/${codigo}`} className="hover:underline">
+            {name}
+          </Link>
         </h3>
         <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
           {description}
         </p>
-        
+
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
           <div>
             <p className="text-xs text-gray-500 mb-1">Precio</p>
@@ -71,23 +69,11 @@ export default function Card({ product }) {
           </div>
         </div>
 
-<<<<<<< HEAD
-        {/* Botón de WhatsApp mejorado */}
-        <a
-          href={whatsappURL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-        >
-          <MessageCircle size={20} />
-          Consultar por WhatsApp
-        </a>
-=======
         {/* Bloque de Acciones */}
         <div className="flex flex-col gap-2">
           {/* Botón de Agregar al Carrito */}
           <button
-            onClick={() => addToCart({ id, name, price, brand, image: images?.[0] })}
+            onClick={() => addToCart({ id, codigo, name, price, brand, image: images?.[0] })}
             className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
           >
             <ShoppingCart size={20} />
@@ -105,7 +91,6 @@ export default function Card({ product }) {
             Consultar por WhatsApp
           </a>
         </div>
->>>>>>> origin/main
       </div>
     </div>
   )

@@ -9,7 +9,7 @@ export default function Ubicaciones() {
       direccion: "4 local 3b, 4A Calle Oriente Bis, San Vicente",
       telefono: "+503 7149-7972",
       mapaUrl: "https://maps.app.goo.gl/inmttgdC75NxPR9k9",
-      imagen: "public/img/cas matriz optica.jpg", // Imagen profesional de tienda/óptica
+      imagen: `${import.meta.env.BASE_URL}img/cas matriz optica.jpg`, // Imagen profesional de tienda/óptica
       tipo: "Sede Central",
       color: "from-cyan-500 to-blue-600"
     },
@@ -20,7 +20,7 @@ export default function Ubicaciones() {
       direccion: "1 Calle Pte local 12, San Vicente",
       telefono: "+503 7149-7972",
       mapaUrl: "https://maps.app.goo.gl/bnGn1JNfsRcyNN5S6",
-      imagen: "public/img/sucursal 1.png",
+      imagen: `${import.meta.env.BASE_URL}img/sucursal 1.png`,
       tipo: "Sucursal 1",
       color: "from-orange-500 to-red-600"
     },
@@ -31,7 +31,7 @@ export default function Ubicaciones() {
       direccion: "Avenida Juan Vicente Villacorta, Local #12",
       telefono: "+503 7149-7972",
       mapaUrl: "https://maps.app.goo.gl/rv1syUiv2xZfPowC9 ",
-      imagen: "public/img/sucursal 2.png",
+      imagen: `${import.meta.env.BASE_URL}img/sucursal 2.png`,
       tipo: "Sucursal 2",
       color: "from-green-500 to-emerald-600"
     },
@@ -42,7 +42,7 @@ export default function Ubicaciones() {
       direccion: "Av José María Rivas, Cojutepeque",
       telefono: "+503 7149-7972",
       mapaUrl: "https://maps.app.goo.gl/42YGnDrJoNjqRTq48",
-      imagen: "public/img/sucursal 4.png",
+      imagen: `${import.meta.env.BASE_URL}img/sucursal 4.png`,
       tipo: "Sucursal 3",
       color: "from-purple-500 to-pink-600"
     }
@@ -149,12 +149,12 @@ export default function Ubicaciones() {
 
   {/* Grid Asimétrico de Fotos */}
   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-    
+
     {/* Foto 1: Fachada / Recepción (Ocupa más espacio en pantallas grandes) */}
     <div className="relative md:col-span-2 md:row-span-2 h-72 md:h-auto min-h-[300px] rounded-2xl overflow-hidden group shadow-md">
-      <img 
-        src="public/img/abel.jpeg" 
-        alt="Clínica y Recepción" 
+      <img
+        src={`${import.meta.env.BASE_URL}img/abel.jpeg`}
+        alt="Clínica y Recepción"
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
@@ -165,9 +165,9 @@ export default function Ubicaciones() {
 
     {/* Foto 2: Laboratorio / Tecnología */}
     <div className="relative h-60 rounded-2xl overflow-hidden group shadow-md">
-      <img 
-        src="public/img/maquina.jpg" 
-        alt="Equipos Tecnológicos" 
+      <img
+        src={`${import.meta.env.BASE_URL}img/maquina.jpg`}
+        alt="Equipos Tecnológicos"
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
@@ -178,9 +178,9 @@ export default function Ubicaciones() {
 
     {/* Foto 3: Variedad de Aros */}
     <div className="relative h-60 rounded-2xl overflow-hidden group shadow-md">
-      <img 
-        src="public/img/aro gildi.jpg" 
-        alt="Variedad de Aros" 
+      <img
+        src={`${import.meta.env.BASE_URL}img/aro gildi.jpg`}
+        alt="Variedad de Aros"
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
@@ -191,9 +191,9 @@ export default function Ubicaciones() {
 
     {/* Foto 4: Consultorio del Examen */}
     <div className="relative h-60 rounded-2xl overflow-hidden group shadow-md">
-      <img 
-        src="public/img/exam.jpg" 
-        alt="Consultorio de Optometría" 
+      <img
+        src={`${import.meta.env.BASE_URL}img/exam.jpg`}
+        alt="Consultorio de Optometría"
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
@@ -204,9 +204,9 @@ export default function Ubicaciones() {
 
     {/* Foto 5: Lentes de Sol */}
     <div className="relative h-60 rounded-2xl overflow-hidden group shadow-md">
-      <img 
-        src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&q=80" 
-        alt="Colección de Sol" 
+      <img
+        src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&q=80"
+        alt="Colección de Sol"
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
@@ -220,7 +220,7 @@ export default function Ubicaciones() {
 
 {/* ================= SECCIÓN INFORMATIVA DE SUCURSALES ================= */}
 <div className="mt-20 space-y-16">
-  
+
   {/* Bloque 1: Beneficios y Facilidades en nuestras instalaciones */}
   <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-gray-100">
     <div className="text-center max-w-3xl mx-auto mb-12">
@@ -346,7 +346,7 @@ export default function Ubicaciones() {
               Agendar Cita por WhatsApp
             </a>
 
-            
+
           </div>
         </div>
 
