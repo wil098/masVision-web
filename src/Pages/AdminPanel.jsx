@@ -45,6 +45,7 @@ const EMPTY_PRODUCT = {
   images: [],
   disponible: true,
   destacado: false,
+  nueva_coleccion: false,
 }
 
 /* ---------- Productos ---------- */
@@ -444,6 +445,16 @@ function ProductForm({ initial, onCancel, onSaved, getIdToken }) {
           <input type="checkbox" name="destacado" checked={form.destacado} onChange={handleChange} className="rounded" />
           Destacado (aparece en Inicio)
         </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            name="nueva_coleccion"
+            checked={form.nueva_coleccion}
+            onChange={handleChange}
+            className="rounded"
+          />
+          Nueva colección (aparece en el carousel del Home)
+        </label>
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -526,7 +537,8 @@ function ProductsTab({ getIdToken }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-800 truncate">{p.name}</p>
                 <p className="text-xs text-gray-500">
-                  {p.codigo} · {p.categoria} · ${p.price} {!p.disponible && '· No disponible'} {p.destacado && '· Destacado'}
+                  {p.codigo} · {p.categoria} · ${p.price} {!p.disponible && '· No disponible'} {p.destacado && '· Destacado'}{' '}
+                  {p.nueva_coleccion && '· Nueva colección'}
                 </p>
               </div>
               <button onClick={() => setEditing(p)} className="p-2 text-gray-400 hover:text-cyan-600 transition-colors">

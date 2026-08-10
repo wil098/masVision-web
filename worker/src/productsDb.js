@@ -7,10 +7,11 @@ function parseProduct(row) {
     images: row.images ? JSON.parse(row.images) : [],
     disponible: Boolean(row.disponible),
     destacado: Boolean(row.destacado),
+    nueva_coleccion: Boolean(row.nueva_coleccion),
   }
 }
 
-export async function listProducts(env, { categoria, destacado } = {}) {
+export async function listProducts(env, { categoria, destacado, nuevaColeccion } = {}) {
   const conditions = ['disponible = 1']
   const params = []
   if (categoria) {
@@ -19,6 +20,9 @@ export async function listProducts(env, { categoria, destacado } = {}) {
   }
   if (destacado) {
     conditions.push('destacado = 1')
+  }
+  if (nuevaColeccion) {
+    conditions.push('nueva_coleccion = 1')
   }
 
   const { results } = await env.DB.prepare(
@@ -44,8 +48,8 @@ export async function createProduct(env, product) {
   await env.DB.prepare(
     `INSERT INTO products (
       codigo, categoria, name, description, price, brand, material, forma,
-      caracteristicas, colores_disponibles, medidas_disponibles, images, disponible, destacado, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      caracteristicas, colores_disponibles, medidas_disponibles, images, disponible, destacado, nueva_coleccion, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       product.codigo,
@@ -62,6 +66,7 @@ export async function createProduct(env, product) {
       JSON.stringify(product.images || []),
       product.disponible === false ? 0 : 1,
       product.destacado ? 1 : 0,
+      product.nueva_coleccion ? 1 : 0,
       now,
       now
     )
@@ -74,7 +79,7 @@ export async function updateProduct(env, codigo, product) {
     `UPDATE products SET
       categoria = ?, name = ?, description = ?, price = ?, brand = ?, material = ?, forma = ?,
       caracteristicas = ?, colores_disponibles = ?, medidas_disponibles = ?,
-      images = ?, disponible = ?, destacado = ?, updated_at = ?
+      images = ?, disponible = ?, destacado = ?, nueva_coleccion = ?, updated_at = ?
      WHERE codigo = ?`
   )
     .bind(
@@ -91,6 +96,7 @@ export async function updateProduct(env, codigo, product) {
       JSON.stringify(product.images || []),
       product.disponible === false ? 0 : 1,
       product.destacado ? 1 : 0,
+      product.nueva_coleccion ? 1 : 0,
       now,
       codigo
     )

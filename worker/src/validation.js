@@ -54,6 +54,7 @@ export const adminProductSchema = z.object({
   images: z.array(z.string().trim().max(2000)).max(20).optional().default([]),
   disponible: z.boolean().optional(),
   destacado: z.boolean().optional(),
+  nueva_coleccion: z.boolean().optional(),
 })
 
 export const adminLensOptionSchema = z.object({

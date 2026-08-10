@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, useLocation } from "react-router-dom"
 import { Glasses, Home, MapPin, Menu, Percent, Sun, X, Phone, ShoppingCart, User, LogOut, Settings } from "lucide-react"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
@@ -11,6 +11,34 @@ const Navbar = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const { cartCount } = useCart()
   const { user, isAdmin, signInWithGoogle, signOut } = useAuth()
+  const location = useLocation()
+
+  // El navbar transparente sobre el hero solo tiene sentido en Home (única
+  // página con una imagen/panel grande detrás). En el resto arranca sólido.
+  const isHome = location.pathname === "/"
+  const [scrolledPastHero, setScrolledPastHero] = useState(!isHome)
+
+  useEffect(() => {
+    if (!isHome) {
+      setScrolledPastHero(true)
+      return
+    }
+    setScrolledPastHero(false)
+
+    const sentinel = document.getElementById("hero-sentinel")
+    if (!sentinel) {
+      setScrolledPastHero(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(([entry]) => setScrolledPastHero(!entry.isIntersecting), {
+      threshold: 0,
+    })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [isHome, location.pathname])
+
+  const transparent = isHome && !scrolledPastHero
 
   const navLinks = [
     { to: "/", icon: Home, label: "Inicio" },
@@ -22,14 +50,20 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="w-full bg-white shadow-md fixed top-0 z-50">
+      <nav
+        className={`w-full fixed top-0 z-50 transition-colors duration-300 ${
+          transparent ? "bg-transparent" : "bg-white shadow-md"
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <Link to="/" onClick={() => setOpen(false)}>
               <img
                 src={`${import.meta.env.BASE_URL}img/logo-mas-vision.png`}
                 alt="Óptica Más Visión"
-                className="h-16 w-auto object-contain"
+                className={`h-16 w-auto object-contain transition-all duration-300 ${
+                  transparent ? "drop-shadow-[0_1px_6px_rgba(0,0,0,0.45)]" : ""
+                }`}
               />
             </Link>
 
@@ -39,7 +73,11 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="text-gray-700 font-medium hover:text-cyan-600 transition-colors"
+                  className={`font-medium transition-colors ${
+                    transparent
+                      ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:text-cyan-200"
+                      : "text-gray-700 hover:text-cyan-600"
+                  }`}
                   onClick={() => setOpen(false)}
                 >
                   {link.label}
@@ -49,7 +87,11 @@ const Navbar = () => {
               {/* Botón de Carrito (Escritorio) */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-2.5 text-gray-700 hover:text-cyan-600 hover:bg-gray-50 rounded-xl transition-all"
+                className={`relative p-2.5 rounded-xl transition-all ${
+                  transparent
+                    ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:bg-white/10"
+                    : "text-gray-700 hover:text-cyan-600 hover:bg-gray-50"
+                }`}
                 aria-label="Abrir carrito"
               >
                 <ShoppingCart size={24} />
@@ -75,7 +117,9 @@ const Navbar = () => {
                 <div className="relative">
                   <button
                     onClick={() => setAccountMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-50 transition-all"
+                    className={`flex items-center gap-2 p-1 rounded-full transition-all ${
+                      transparent ? "hover:bg-white/10" : "hover:bg-gray-50"
+                    }`}
                   >
                     {user.photoURL ? (
                       <img src={user.photoURL} alt={user.displayName} className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
@@ -121,7 +165,11 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={signInWithGoogle}
-                  className="flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-colors ${
+                    transparent
+                      ? "border border-white/70 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:bg-white/10"
+                      : "border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   <User size={18} />
                   Iniciar sesión
@@ -134,7 +182,9 @@ const Navbar = () => {
               {/* Botón de Carrito (Móvil) */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-2.5 text-gray-700"
+                className={`relative p-2.5 transition-colors ${
+                  transparent ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]" : "text-gray-700"
+                }`}
                 aria-label="Abrir carrito móvil"
               >
                 <ShoppingCart size={24} />
@@ -147,7 +197,9 @@ const Navbar = () => {
 
               <button
                 onClick={() => setOpen(!open)}
-                className="p-2 text-gray-700"
+                className={`p-2 transition-colors ${
+                  transparent ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]" : "text-gray-700"
+                }`}
                 aria-label="Toggle menu"
               >
                 {open ? <X size={28} /> : <Menu size={28} />}

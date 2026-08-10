@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react'
 import HeroSection from '../components/HeroSection'
-import BrandCarousel from '../components/BrandCarousel'
-import CategoryLinks from '../components/CategoryLinks'
+import ProductCarousel from '../components/ProductCarousel'
+import FeatureGrid from '../components/FeatureGrid'
 import Card from '../components/Card'
 import { fetchProducts } from '../lib/orderService'
 
 export default function Home() {
+  const [nuevaColeccion, setNuevaColeccion] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchProducts({ nuevaColeccion: true })
+      .then(setNuevaColeccion)
+      .catch((err) => console.error('Error cargando la nueva colección:', err))
+  }, [])
 
   useEffect(() => {
     fetchProducts({ destacado: true })
@@ -19,8 +26,8 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <HeroSection />
-      <BrandCarousel />
-      <CategoryLinks />
+      <ProductCarousel title="Nueva colección" products={nuevaColeccion} />
+      <FeatureGrid />
 
       {/* Sección de productos */}
       <section id="productos" className="bg-gradient-to-b from-gray-50 to-white py-16 px-4">

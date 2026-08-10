@@ -522,7 +522,8 @@ async function handleGetProducts(request, env, cors) {
   const url = new URL(request.url)
   const categoria = url.searchParams.get('categoria') || undefined
   const destacado = url.searchParams.get('destacado') === '1'
-  const products = await listProducts(env, { categoria, destacado })
+  const nuevaColeccion = url.searchParams.get('nuevaColeccion') === '1'
+  const products = await listProducts(env, { categoria, destacado, nuevaColeccion })
   return jsonResponse({ success: true, products }, 200, cors)
 }
 

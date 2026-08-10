@@ -18,11 +18,12 @@ export function requireApiBase() {
   return apiBase
 }
 
-export async function fetchProducts({ categoria, destacado } = {}) {
+export async function fetchProducts({ categoria, destacado, nuevaColeccion } = {}) {
   const apiBase = requireApiBase()
   const params = new URLSearchParams()
   if (categoria) params.set('categoria', categoria)
   if (destacado) params.set('destacado', '1')
+  if (nuevaColeccion) params.set('nuevaColeccion', '1')
 
   const response = await fetch(`${apiBase}/api/products?${params.toString()}`)
   const result = await response.json()
