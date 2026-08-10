@@ -1,13 +1,27 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, Eye, ShoppingCart } from 'lucide-react'
+import { MessageCircle, ShoppingCart } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+
+// Productos antiguos guardan cada color como texto plano (ej. "C1"); los
+// nuevos llevan { nombre, hex, images } para poder mostrar el color real.
+function getColorHex(color) {
+  return typeof color === 'string' ? null : color.hex
+}
+
+function getColorImages(color) {
+  return typeof color === 'string' ? [] : color.images || []
+}
 
 export default function Card({ product }) {
   const { addToCart } = useCart()
 
-  if (!product) return null
+  const { name, price, brand, images, codigo, colores_disponibles } = product || {}
+  const [activeImage, setActiveImage] = useState(images?.[0])
 
-  const { name, description, price, brand, images, codigo } = product
+  useEffect(() => setActiveImage(images?.[0]), [images])
+
+  if (!product) return null
 
   // El código de producto es la llave real en D1; el Worker la usa para
   // recalcular el precio del pedido, así que el carrito debe llevarla.
@@ -17,80 +31,67 @@ export default function Card({ product }) {
   const whatsappMessage = `Hola! Me interesa el modelo *${name}* de ${brand}. Precio: $${price}`
   const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
 
+  const swatches = (colores_disponibles || []).filter((color) => getColorHex(color))
+
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 w-full max-w-[340px] group">
-      {/* Imagen con efecto hover mejorado */}
+    <div className="w-full max-w-[340px] group">
       <Link
         to={`/producto/${codigo}`}
-        className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 cursor-pointer block"
+        className="block relative aspect-square rounded-2xl bg-gray-50 overflow-hidden mb-4"
       >
         <img
-          src={images?.[0]}
+          src={activeImage}
           alt={name}
-          className="w-full h-full object-contain p-4 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3"
+          className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
         />
-        {images?.[1] && (
-          <img
-            src={images[1]}
-            alt={`${name} - vista 2`}
-            className="absolute inset-0 w-full h-full object-contain p-4 opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3"
-          />
-        )}
-
-        {/* Badge de marca */}
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-md">
-          <span className="text-xs font-bold text-cyan-600">{brand}</span>
-        </div>
-
-        {/* Overlay con ícono */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
-          <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={32} />
-        </div>
       </Link>
 
-      {/* Contenido */}
-      <div className="p-5">
-        <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1 group-hover:text-cyan-600 transition-colors">
-          <Link to={`/producto/${codigo}`} className="hover:underline">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link
+            to={`/producto/${codigo}`}
+            className="block text-base font-semibold text-gray-900 hover:text-cyan-600 transition-colors truncate"
+          >
             {name}
           </Link>
-        </h3>
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
-          {description}
-        </p>
-
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Precio</p>
-            <p className="text-3xl font-bold text-gray-900">
-              ${price}
-              <span className="text-sm font-normal text-gray-500">.00</span>
-            </p>
-          </div>
+          <p className="text-xs text-gray-500">{brand}</p>
         </div>
+        <p className="text-base font-semibold text-gray-900 whitespace-nowrap">${price}</p>
+      </div>
 
-        {/* Bloque de Acciones */}
-        <div className="flex flex-col gap-2">
-          {/* Botón de Agregar al Carrito */}
-          <button
-            onClick={() => addToCart({ id, codigo, name, price, brand, image: images?.[0] })}
-            className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            <ShoppingCart size={20} />
-            Agregar al Carrito
-          </button>
-
-          {/* Botón de WhatsApp mejorado */}
-          <a
-            href={whatsappURL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            <MessageCircle size={20} />
-            Consultar por WhatsApp
-          </a>
+      {swatches.length > 0 && (
+        <div className="flex items-center gap-1.5 mt-3">
+          {swatches.map((color, idx) => (
+            <button
+              key={`${getColorHex(color)}-${idx}`}
+              type="button"
+              onClick={() => setActiveImage(getColorImages(color)[0] || images?.[0])}
+              aria-label={typeof color === 'string' ? color : color.nombre}
+              className="w-5 h-5 rounded-full border border-black/10 shrink-0 hover:scale-110 transition-transform"
+              style={{ backgroundColor: getColorHex(color) }}
+            />
+          ))}
         </div>
+      )}
+
+      <div className="flex flex-col gap-2 mt-4">
+        <button
+          onClick={() => addToCart({ id, codigo, name, price, brand, image: images?.[0] })}
+          className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-full font-semibold text-sm transition-colors"
+        >
+          <ShoppingCart size={16} />
+          Agregar al carrito
+        </button>
+
+        <a
+          href={whatsappURL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 px-6 py-3 rounded-full font-semibold text-sm transition-colors"
+        >
+          <MessageCircle size={16} />
+          Consultar por WhatsApp
+        </a>
       </div>
     </div>
   )

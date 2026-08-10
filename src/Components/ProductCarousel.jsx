@@ -55,13 +55,18 @@ export default function ProductCarousel({ title, products }) {
                 <img
                   src={product.images?.[0]}
                   alt={product.name}
-                  className="w-full h-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-cyan-600 transition-colors">
-                {product.name}
-              </h3>
-              <p className="text-gray-600">${product.price}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-gray-900 group-hover:text-cyan-600 transition-colors truncate">
+                    {product.name}
+                  </p>
+                  <p className="text-xs text-gray-500">{product.brand}</p>
+                </div>
+                <p className="text-base font-semibold text-gray-900 whitespace-nowrap">${product.price}</p>
+              </div>
             </Link>
           ))}
         </div>
