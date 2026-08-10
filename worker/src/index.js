@@ -32,6 +32,16 @@ import {
 } from './lensOptionsDb.js'
 import { logEvent, logError } from './logger.js'
 import { requireUser, requireAdmin } from './auth.js'
+import { checkRateLimit, getClientIp, isAuthBlocked, recordAuthFailure } from './rateLimit.js'
+import { securityHeaders, assertEnvIsConfigured } from './security.js'
+import {
+  checkoutItemsSchema,
+  addressSchema,
+  adminProductSchema,
+  adminLensOptionSchema,
+  adminOrderUpdateSchema,
+  parseSchema,
+} from './validation.js'
 
 function corsHeaders(origin, allowedOrigins) {
   const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
@@ -47,20 +57,34 @@ function corsHeaders(origin, allowedOrigins) {
 // usuario ya exista en D1 (users.id) antes de continuar, porque addresses y
 // orders tienen una llave foránea hacia esa tabla.
 async function authenticateOrRespond(request, env, cors) {
+  const ip = getClientIp(request)
+  if (await isAuthBlocked(env, ip)) {
+    logEvent('auth_blocked_rate_limit', { ip })
+    return { errorResponse: jsonResponse({ success: false, message: 'Demasiados intentos fallidos. Intenta más tarde.' }, 429, cors) }
+  }
   try {
     const user = await requireUser(request, env)
     await upsertUser(env, user)
     return { user }
   } catch (err) {
+    await recordAuthFailure(env, ip)
+    logEvent('auth_failed', { ip, reason: err.message })
     return { errorResponse: jsonResponse({ success: false, message: err.message }, err.status || 401, cors) }
   }
 }
 
 // Igual, pero exige is_admin = 1. Se usa en todas las rutas /admin/*.
 async function authenticateAdminOrRespond(request, env, cors) {
+  const ip = getClientIp(request)
+  if (await isAuthBlocked(env, ip)) {
+    logEvent('auth_blocked_rate_limit', { ip })
+    return { errorResponse: jsonResponse({ success: false, message: 'Demasiados intentos fallidos. Intenta más tarde.' }, 429, cors) }
+  }
   try {
     return { user: await requireAdmin(request, env) }
   } catch (err) {
+    await recordAuthFailure(env, ip)
+    logEvent('auth_failed', { ip, reason: err.message, admin: true })
     return { errorResponse: jsonResponse({ success: false, message: err.message }, err.status || 401, cors) }
   }
 }
@@ -78,7 +102,7 @@ function arrayBufferToBase64(buffer) {
 function jsonResponse(data, status, headers) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { 'Content-Type': 'application/json', ...securityHeaders(), ...headers },
   })
 }
 
@@ -213,24 +237,24 @@ async function handleCheckout(request, env, cors) {
   // El precio SIEMPRE se recalcula aquí desde D1 — nunca se confía en un
   // total mandado por el navegador (eso era lo que permitía pagar cualquier
   // monto con solo editar el request).
-  let items
+  let rawItems
   try {
-    items = JSON.parse(get('Items') || '[]')
+    rawItems = JSON.parse(get('Items') || '[]')
   } catch {
     return jsonResponse({ success: false, message: 'Los productos del pedido no son válidos.' }, 400, cors)
   }
-  if (!Array.isArray(items) || items.length === 0) {
-    return jsonResponse({ success: false, message: 'El pedido no tiene productos.' }, 400, cors)
+
+  const { data: items, error: itemsError } = parseSchema(checkoutItemsSchema, rawItems)
+  if (itemsError) {
+    logEvent('validation_rejected', { endpoint: 'checkout', userId: user.uid, error: itemsError })
+    return jsonResponse({ success: false, message: 'Los productos del pedido no son válidos.' }, 400, cors)
   }
 
   let monto = 0
   let firstProductName = null
   const resumenLines = []
-  for (const rawItem of items) {
-    const codigo = String(rawItem?.codigo || '')
-    const cantidad = Math.max(1, Math.floor(Number(rawItem?.cantidad) || 1))
-    const color = typeof rawItem?.color === 'string' ? rawItem.color : ''
-    const medida = typeof rawItem?.medida === 'string' ? rawItem.medida : ''
+  for (const item of items) {
+    const { codigo, cantidad, color, medida, lensOptionIds } = item
 
     const product = await getProduct(env, codigo)
     if (!product || !product.disponible) {
@@ -243,7 +267,6 @@ async function handleCheckout(request, env, cors) {
     // navegador solo manda los ids elegidos, nunca un precio. La
     // personalización de lente solo aplica a aros oftálmicos (no tiene
     // sentido en lentes de sol), y esa regla no se confía solo al frontend.
-    const lensOptionIds = Array.isArray(rawItem?.lensOptionIds) ? rawItem.lensOptionIds : []
     if (lensOptionIds.length > 0 && product.categoria !== 'oftalmico') {
       logEvent('checkout_invalid_lens_option', { codigo, reason: 'categoria_no_oftalmico' })
       return jsonResponse({ success: false, message: 'Las opciones de lente solo aplican a aros oftálmicos.' }, 400, cors)
@@ -251,7 +274,7 @@ async function handleCheckout(request, env, cors) {
     let lensOptionsTotal = 0
     const lensOptionNames = []
     for (const rawId of lensOptionIds) {
-      const lensOption = await getLensOption(env, Number(rawId))
+      const lensOption = await getLensOption(env, rawId)
       if (!lensOption || !lensOption.disponible || lensOption.precio_adicional === null) {
         logEvent('checkout_invalid_lens_option', { codigo, lensOptionId: rawId })
         return jsonResponse({ success: false, message: 'Una de las opciones de lente elegidas ya no está disponible.' }, 400, cors)
@@ -285,14 +308,17 @@ async function handleCheckout(request, env, cors) {
     }
     envio = saved
   } else {
-    const departamento = get('Departamento')
-    const municipio = get('Municipio')
-    const direccion = get('Direccion')
-    const referencia = get('Referencia')
-    if (!departamento || !municipio || !direccion) {
+    const { data: parsedAddress, error: addressError } = parseSchema(addressSchema, {
+      departamento: get('Departamento'),
+      municipio: get('Municipio'),
+      direccion: get('Direccion'),
+      referencia: get('Referencia') || undefined,
+    })
+    if (addressError) {
+      logEvent('validation_rejected', { endpoint: 'checkout_address', userId: user.uid, error: addressError })
       return jsonResponse({ success: false, message: 'Falta la dirección de envío.' }, 400, cors)
     }
-    envio = { departamento, municipio, direccion, referencia }
+    envio = parsedAddress
     if (get('GuardarDireccion') === '1') {
       await createAddress(env, user.uid, envio)
     }
@@ -451,19 +477,13 @@ async function handleCreateAddress(request, env, cors) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
   }
 
-  const { etiqueta, departamento, municipio, direccion, referencia, esPredeterminada } = body || {}
-  if (!departamento || !municipio || !direccion) {
+  const { data: address, error } = parseSchema(addressSchema, body || {})
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'addresses_create', userId: user.uid, error })
     return jsonResponse({ success: false, message: 'Faltan campos obligatorios.' }, 400, cors)
   }
 
-  const id = await createAddress(env, user.uid, {
-    etiqueta,
-    departamento,
-    municipio,
-    direccion,
-    referencia,
-    esPredeterminada,
-  })
+  const id = await createAddress(env, user.uid, address)
   logEvent('address_created', { userId: user.uid, addressId: id })
   return jsonResponse({ success: true, id }, 201, cors)
 }
@@ -525,7 +545,7 @@ async function handleGetImage(env, pathname) {
   if (!object) {
     return new Response('No encontrado', { status: 404 })
   }
-  const headers = new Headers()
+  const headers = new Headers(securityHeaders())
   object.writeHttpMetadata(headers)
   headers.set('etag', object.httpEtag)
   headers.set('Cache-Control', 'public, max-age=31536000, immutable')
@@ -550,7 +570,9 @@ async function handleAdminCreateProduct(request, env, cors) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
   }
 
-  if (!body?.codigo || !body?.name || !body?.categoria || !Number.isFinite(Number(body?.price))) {
+  const { data: product, error } = parseSchema(adminProductSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_product_create', error })
     return jsonResponse(
       { success: false, message: 'Faltan campos obligatorios (código, nombre, categoría, precio).' },
       400,
@@ -559,11 +581,11 @@ async function handleAdminCreateProduct(request, env, cors) {
   }
 
   try {
-    await createProduct(env, { ...body, price: Number(body.price) })
+    await createProduct(env, product)
   } catch {
     return jsonResponse({ success: false, message: 'Ya existe un producto con ese código.' }, 409, cors)
   }
-  logEvent('admin_product_created', { codigo: body.codigo })
+  logEvent('admin_product_created', { codigo: product.codigo })
   return jsonResponse({ success: true }, 201, cors)
 }
 
@@ -578,7 +600,13 @@ async function handleAdminUpdateProduct(request, env, cors, codigo) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
   }
 
-  const updated = await updateProduct(env, codigo, { ...body, price: Number(body.price) })
+  const { data: product, error } = parseSchema(adminProductSchema, { ...body, codigo })
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_product_update', codigo, error })
+    return jsonResponse({ success: false, message: 'Datos del producto inválidos.' }, 400, cors)
+  }
+
+  const updated = await updateProduct(env, codigo, product)
   if (!updated) {
     return jsonResponse({ success: false, message: 'Producto no encontrado.' }, 404, cors)
   }
@@ -646,12 +674,13 @@ async function handleAdminUpdateOrder(request, env, cors, orderId) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
   }
 
-  await updateOrderTracking(env, orderId, {
-    courierName: body?.courierName,
-    trackingNumber: body?.trackingNumber,
-    trackingUrl: body?.trackingUrl,
-    status: body?.status,
-  })
+  const { data: orderUpdate, error } = parseSchema(adminOrderUpdateSchema, body || {})
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_order_update', orderId, error })
+    return jsonResponse({ success: false, message: 'Datos de actualización inválidos.' }, 400, cors)
+  }
+
+  await updateOrderTracking(env, orderId, orderUpdate)
   logEvent('admin_order_updated', { orderId })
   return jsonResponse({ success: true }, 200, cors)
 }
@@ -681,11 +710,13 @@ async function handleAdminCreateLensOption(request, env, cors) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
   }
 
-  if (!body?.categoria || !body?.nombre) {
+  const { data: lensOption, error } = parseSchema(adminLensOptionSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_lens_option_create', error })
     return jsonResponse({ success: false, message: 'Faltan campos obligatorios (categoría, nombre).' }, 400, cors)
   }
 
-  const id = await createLensOption(env, body)
+  const id = await createLensOption(env, lensOption)
   logEvent('admin_lens_option_created', { id })
   return jsonResponse({ success: true, id }, 201, cors)
 }
@@ -701,7 +732,13 @@ async function handleAdminUpdateLensOption(request, env, cors, id) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
   }
 
-  const updated = await updateLensOption(env, id, body)
+  const { data: lensOption, error } = parseSchema(adminLensOptionSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_lens_option_update', id, error })
+    return jsonResponse({ success: false, message: 'Datos de la opción de lente inválidos.' }, 400, cors)
+  }
+
+  const updated = await updateLensOption(env, id, lensOption)
   if (!updated) {
     return jsonResponse({ success: false, message: 'Opción de lente no encontrada.' }, 404, cors)
   }
@@ -721,8 +758,26 @@ async function handleAdminDeleteLensOption(request, env, cors, id) {
   return jsonResponse({ success: true }, 200, cors)
 }
 
+// Determina el bucket de rate limiting según la ruta: pagos y escritura en
+// /admin/* son "sensitive" (10 req/15min), el resto de la API es "general"
+// (100 req/15min). Las lecturas de /admin/* van en "general" — con
+// "sensitive" el propio panel de administración se bloquearía solo al
+// cargar (varias peticiones GET en un solo vistazo).
+function rateLimitBucketFor(method, pathname) {
+  if (pathname === '/checkout') return 'sensitive'
+  if (pathname.startsWith('/admin/') && method !== 'GET') return 'sensitive'
+  return 'general'
+}
+
 export default {
   async fetch(request, env) {
+    try {
+      assertEnvIsConfigured(env)
+    } catch (err) {
+      logError('startup_config_error', err, {})
+      return jsonResponse({ success: false, message: 'El servicio no está disponible en este momento.' }, 500, {})
+    }
+
     const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
     const origin = request.headers.get('Origin') ?? ''
     const cors = corsHeaders(origin, allowedOrigins)
@@ -731,6 +786,18 @@ export default {
 
     if (method === 'OPTIONS') {
       return new Response(null, { headers: cors })
+    }
+
+    const bucket = rateLimitBucketFor(method, pathname)
+    const ip = getClientIp(request)
+    const rateLimit = await checkRateLimit(env, bucket, ip)
+    if (!rateLimit.allowed) {
+      logEvent('rate_limit_exceeded', { ip, bucket, pathname, method })
+      return jsonResponse(
+        { success: false, message: 'Demasiadas peticiones. Intenta de nuevo más tarde.' },
+        429,
+        { ...cors, 'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) }
+      )
     }
 
     if (method === 'POST' && pathname === '/checkout') {
