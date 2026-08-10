@@ -88,3 +88,28 @@ export async function updateAdminLensOption(id, lensOption, getIdToken) {
 export async function deleteAdminLensOption(id, getIdToken) {
   return callJson(`/admin/lens-options/${id}`, { method: 'DELETE' }, getIdToken)
 }
+
+export async function fetchAdminPromoBlocks(getIdToken) {
+  const result = await callJson('/admin/promo-blocks', { method: 'GET' }, getIdToken)
+  return result.promoBlocks
+}
+
+export async function createAdminPromoBlock(promoBlock, getIdToken) {
+  return callJson(
+    '/admin/promo-blocks',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(promoBlock) },
+    getIdToken
+  )
+}
+
+export async function updateAdminPromoBlock(id, promoBlock, getIdToken) {
+  return callJson(
+    `/admin/promo-blocks/${id}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(promoBlock) },
+    getIdToken
+  )
+}
+
+export async function deleteAdminPromoBlock(id, getIdToken) {
+  return callJson(`/admin/promo-blocks/${id}`, { method: 'DELETE' }, getIdToken)
+}

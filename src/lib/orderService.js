@@ -43,6 +43,18 @@ export async function fetchProduct(codigo) {
   return result.product
 }
 
+// Bloques promocionales que se intercalan en la grilla de aros de una
+// página específica (aros-oftalmicos | aros-sol), ya ordenados por posición.
+export async function fetchPromoBlocks(pagina) {
+  const apiBase = requireApiBase()
+  const response = await fetch(`${apiBase}/api/promo-blocks?pagina=${encodeURIComponent(pagina)}`)
+  const result = await response.json()
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudieron cargar los bloques promocionales.')
+  }
+  return result.promoBlocks
+}
+
 // Opciones de lente (filtro, marca, etc.) activas y con precio definido.
 // Vacío hasta que el admin cargue precios reales — el llamador debe tratar
 // una lista vacía como "no mostrar personalización de lente".

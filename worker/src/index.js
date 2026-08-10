@@ -30,6 +30,13 @@ import {
   updateLensOption,
   deleteLensOption,
 } from './lensOptionsDb.js'
+import {
+  listPromoBlocks,
+  listAllPromoBlocksForAdmin,
+  createPromoBlock,
+  updatePromoBlock,
+  deletePromoBlock,
+} from './promoBlocksDb.js'
 import { logEvent, logError } from './logger.js'
 import { requireUser, requireAdmin } from './auth.js'
 import { checkRateLimit, getClientIp, isAuthBlocked, recordAuthFailure } from './rateLimit.js'
@@ -39,6 +46,7 @@ import {
   addressSchema,
   adminProductSchema,
   adminLensOptionSchema,
+  adminPromoBlockSchema,
   adminOrderUpdateSchema,
   parseSchema,
 } from './validation.js'
@@ -540,6 +548,16 @@ async function handleGetLensOptions(request, env, cors) {
   return jsonResponse({ success: true, lensOptions }, 200, cors)
 }
 
+async function handleGetPromoBlocks(request, env, cors) {
+  const url = new URL(request.url)
+  const pagina = url.searchParams.get('pagina') || ''
+  if (!['aros-oftalmicos', 'aros-sol'].includes(pagina)) {
+    return jsonResponse({ success: false, message: 'Página inválida.' }, 400, cors)
+  }
+  const promoBlocks = await listPromoBlocks(env, { pagina })
+  return jsonResponse({ success: true, promoBlocks }, 200, cors)
+}
+
 async function handleGetImage(env, pathname) {
   const key = decodeURIComponent(pathname.replace('/images/', ''))
   const object = await env.IMAGES_BUCKET.get(key)
@@ -759,6 +777,72 @@ async function handleAdminDeleteLensOption(request, env, cors, id) {
   return jsonResponse({ success: true }, 200, cors)
 }
 
+async function handleAdminListPromoBlocks(request, env, cors) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const promoBlocks = await listAllPromoBlocksForAdmin(env)
+  return jsonResponse({ success: true, promoBlocks }, 200, cors)
+}
+
+async function handleAdminCreatePromoBlock(request, env, cors) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
+  }
+
+  const { data: promoBlock, error } = parseSchema(adminPromoBlockSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_promo_block_create', error })
+    return jsonResponse({ success: false, message: 'Faltan campos obligatorios (página, título, imagen).' }, 400, cors)
+  }
+
+  const id = await createPromoBlock(env, promoBlock)
+  logEvent('admin_promo_block_created', { id })
+  return jsonResponse({ success: true, id }, 201, cors)
+}
+
+async function handleAdminUpdatePromoBlock(request, env, cors, id) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
+  }
+
+  const { data: promoBlock, error } = parseSchema(adminPromoBlockSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_promo_block_update', id, error })
+    return jsonResponse({ success: false, message: 'Datos del bloque promocional inválidos.' }, 400, cors)
+  }
+
+  const updated = await updatePromoBlock(env, id, promoBlock)
+  if (!updated) {
+    return jsonResponse({ success: false, message: 'Bloque promocional no encontrado.' }, 404, cors)
+  }
+  logEvent('admin_promo_block_updated', { id })
+  return jsonResponse({ success: true }, 200, cors)
+}
+
+async function handleAdminDeletePromoBlock(request, env, cors, id) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+
+  const deleted = await deletePromoBlock(env, id)
+  if (!deleted) {
+    return jsonResponse({ success: false, message: 'Bloque promocional no encontrado.' }, 404, cors)
+  }
+  logEvent('admin_promo_block_deleted', { id })
+  return jsonResponse({ success: true }, 200, cors)
+}
+
 // Determina el bucket de rate limiting según la ruta: pagos y escritura en
 // /admin/* son "sensitive" (10 req/15min), el resto de la API es "general"
 // (100 req/15min). Las lecturas de /admin/* van en "general" — con
@@ -842,6 +926,10 @@ export default {
       return handleGetLensOptions(request, env, cors)
     }
 
+    if (method === 'GET' && pathname === '/api/promo-blocks') {
+      return handleGetPromoBlocks(request, env, cors)
+    }
+
     if (method === 'GET' && pathname.startsWith('/images/')) {
       return handleGetImage(env, pathname)
     }
@@ -892,6 +980,22 @@ export default {
 
     if (method === 'DELETE' && pathname.startsWith('/admin/lens-options/')) {
       return handleAdminDeleteLensOption(request, env, cors, Number(pathname.split('/').pop()))
+    }
+
+    if (method === 'GET' && pathname === '/admin/promo-blocks') {
+      return handleAdminListPromoBlocks(request, env, cors)
+    }
+
+    if (method === 'POST' && pathname === '/admin/promo-blocks') {
+      return handleAdminCreatePromoBlock(request, env, cors)
+    }
+
+    if (method === 'PUT' && pathname.startsWith('/admin/promo-blocks/')) {
+      return handleAdminUpdatePromoBlock(request, env, cors, Number(pathname.split('/').pop()))
+    }
+
+    if (method === 'DELETE' && pathname.startsWith('/admin/promo-blocks/')) {
+      return handleAdminDeletePromoBlock(request, env, cors, Number(pathname.split('/').pop()))
     }
 
     return jsonResponse({ success: false, message: 'Ruta no encontrada.' }, 404, cors)

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Package, ShoppingBag, Users, Plus, Trash2, Pencil, X, Upload, SlidersHorizontal } from 'lucide-react'
+import { Package, ShoppingBag, Users, Plus, Trash2, Pencil, X, Upload, SlidersHorizontal, Image } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import LoginGate from '../Components/LoginGate'
 import {
@@ -15,6 +15,10 @@ import {
   createAdminLensOption,
   updateAdminLensOption,
   deleteAdminLensOption,
+  fetchAdminPromoBlocks,
+  createAdminPromoBlock,
+  updateAdminPromoBlock,
+  deleteAdminPromoBlock,
 } from '../lib/adminService'
 
 const TABS = [
@@ -22,6 +26,12 @@ const TABS = [
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
   { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'lentes', label: 'Lentes', icon: SlidersHorizontal },
+  { id: 'promos', label: 'Promos', icon: Image },
+]
+
+const PROMO_PAGINAS = [
+  { value: 'aros-oftalmicos', label: 'Aros Oftálmicos' },
+  { value: 'aros-sol', label: 'Aros de Sol' },
 ]
 
 const STATUS_STYLES = {
@@ -716,6 +726,7 @@ function CustomersTab({ getIdToken }) {
 
 /* ---------- Lentes (filtro, marca, etc.) ---------- */
 const EMPTY_LENS_OPTION = { categoria: '', nombre: '', precio_adicional: '', disponible: false }
+const EMPTY_PROMO_BLOCK = { pagina: 'aros-oftalmicos', title: '', subtitle: '', image: '', position: 1 }
 
 function LensOptionForm({ initial, onCancel, onSaved, getIdToken }) {
   const isEditing = Boolean(initial)
@@ -920,6 +931,241 @@ function LensOptionsTab({ getIdToken }) {
   )
 }
 
+/* ---------- Bloques promocionales ---------- */
+function PromoBlockForm({ initial, onCancel, onSaved, getIdToken }) {
+  const isEditing = Boolean(initial)
+  const [form, setForm] = useState(initial ? { ...EMPTY_PROMO_BLOCK, ...initial } : EMPTY_PROMO_BLOCK)
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const url = await uploadAdminImage(file, getIdToken)
+      setForm((prev) => ({ ...prev, image: url }))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!form.title.trim() || !form.image.trim()) {
+      setError('Título e imagen son obligatorios.')
+      return
+    }
+
+    const payload = { ...form, position: Number(form.position) || 1 }
+
+    setSaving(true)
+    try {
+      if (isEditing) {
+        await updateAdminPromoBlock(initial.id, payload, getIdToken)
+      } else {
+        await createAdminPromoBlock(payload, getIdToken)
+      }
+      onSaved()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Página</label>
+          <select
+            name="pagina"
+            value={form.pagina}
+            onChange={handleChange}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+          >
+            {PROMO_PAGINAS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Posición en la grilla</label>
+          <input
+            name="position"
+            type="number"
+            min="1"
+            value={form.position}
+            onChange={handleChange}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Título</label>
+        <input
+          name="title"
+          value={form.title}
+          onChange={handleChange}
+          placeholder="Ej. Nueva colección"
+          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Subtítulo (opcional)</label>
+        <input
+          name="subtitle"
+          value={form.subtitle}
+          onChange={handleChange}
+          placeholder="Ej. Bestsellers en nuevos colores"
+          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Imagen</label>
+        {form.image && (
+          <div className="w-24 h-24 rounded-lg border border-gray-200 overflow-hidden mb-2">
+            <img src={form.image} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <label className="inline-flex items-center gap-2 px-3 py-2 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 rounded-lg text-xs font-semibold cursor-pointer">
+          <Upload size={14} />
+          {uploading ? 'Subiendo...' : form.image ? 'Cambiar imagen' : 'Subir imagen'}
+          <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} className="hidden" />
+        </label>
+      </div>
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div className="flex gap-2 pt-2">
+        <button type="button" onClick={onCancel} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={saving || uploading}
+          className="flex-1 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm"
+        >
+          {saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear bloque'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function PromoBlocksTab({ getIdToken }) {
+  const [promoBlocks, setPromoBlocks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [editing, setEditing] = useState(null) // null | 'new' | promoBlock
+  const [deletingId, setDeletingId] = useState(null)
+
+  const load = () => {
+    setLoading(true)
+    fetchAdminPromoBlocks(getIdToken)
+      .then(setPromoBlocks)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDelete = async (id) => {
+    setDeletingId(id)
+    try {
+      await deleteAdminPromoBlock(id, getIdToken)
+      setPromoBlocks((prev) => prev.filter((b) => b.id !== id))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  if (editing) {
+    return (
+      <PromoBlockForm
+        initial={editing === 'new' ? null : editing}
+        onCancel={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null)
+          load()
+        }}
+        getIdToken={getIdToken}
+      />
+    )
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-4">
+        Bloques promocionales (imagen + título + subtítulo) que se intercalan dentro de la grilla de Aros Oftálmicos y
+        Aros de Sol, en el mismo tamaño que una card de producto. La posición indica en qué celda de la grilla aparece.
+      </p>
+
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-gray-500">{promoBlocks.length} bloques</p>
+        <button
+          onClick={() => setEditing('new')}
+          className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-xl text-sm font-semibold"
+        >
+          <Plus size={16} /> Nuevo bloque
+        </button>
+      </div>
+
+      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+      {loading ? (
+        <p className="text-sm text-gray-400">Cargando...</p>
+      ) : promoBlocks.length === 0 ? (
+        <p className="text-sm text-gray-500">Todavía no hay bloques promocionales configurados.</p>
+      ) : (
+        <div className="space-y-2">
+          {promoBlocks.map((b) => (
+            <div key={b.id} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <img src={b.image} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-800 truncate">{b.title}</p>
+                <p className="text-xs text-gray-500">
+                  {PROMO_PAGINAS.find((p) => p.value === b.pagina)?.label || b.pagina} · Posición {b.position}
+                </p>
+              </div>
+              <button onClick={() => setEditing(b)} className="p-2 text-gray-400 hover:text-cyan-600 transition-colors">
+                <Pencil size={18} />
+              </button>
+              <button
+                onClick={() => handleDelete(b.id)}
+                disabled={deletingId === b.id}
+                className="p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ---------- Componente principal ---------- */
 export default function AdminPanel() {
   const { user, isAdmin, loading, getIdToken } = useAuth()
@@ -971,6 +1217,7 @@ export default function AdminPanel() {
         {tab === 'pedidos' && <OrdersTab getIdToken={getIdToken} />}
         {tab === 'clientes' && <CustomersTab getIdToken={getIdToken} />}
         {tab === 'lentes' && <LensOptionsTab getIdToken={getIdToken} />}
+        {tab === 'promos' && <PromoBlocksTab getIdToken={getIdToken} />}
       </div>
     </section>
   )

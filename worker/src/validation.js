@@ -67,6 +67,14 @@ export const adminLensOptionSchema = z.object({
   disponible: z.boolean().optional(),
 })
 
+export const adminPromoBlockSchema = z.object({
+  pagina: z.enum(['aros-oftalmicos', 'aros-sol']),
+  title: shortText,
+  subtitle: optionalText(300),
+  image: z.string().trim().min(1).max(2000),
+  position: z.coerce.number().int().positive(),
+})
+
 export const adminOrderUpdateSchema = z.object({
   courierName: z.string().trim().max(200).optional(),
   trackingNumber: z.string().trim().max(200).optional(),
