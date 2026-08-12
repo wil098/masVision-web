@@ -6,15 +6,12 @@ import Ofertas from './Pages/Ofertas';
 import MiCuenta from './Pages/MiCuenta';
 import AdminPanel from './Pages/AdminPanel';
 import ProductoDetalle from './Pages/ProductoDetalle';
+import Sucursales from './Pages/Sucursales';
 import Navbar from './Components/Navbar';
 import Footer from './Components/Footer';
 import PaymentReturnNotice from './Components/PaymentReturnNotice';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
-
-// CORRECCIÓN 1: Asegúrate de que la palabra "pages" esté en minúscula
-// si tu carpeta general se llama así (tenías './Pages/Sucursales')
-import Sucursales from './pages/Sucursales'
 
 export default function App() {
   return (
@@ -31,7 +28,6 @@ export default function App() {
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/producto/:codigo" element={<ProductoDetalle />} />
 
-          {/* CORRECCIÓN 2: Agregamos la ruta para la pestaña de sucursales */}
           <Route path="/sucursales" element={<Sucursales />} />
         </Routes>
         <Footer />

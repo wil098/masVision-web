@@ -7,7 +7,7 @@ compatibility_date = "2026-07-27"
 [vars]
 FROM_EMAIL = "onboarding@resend.dev"
 DESTINATION_EMAIL = "wilfredoangel1@gmail.com"
-ALLOWED_ORIGINS = "https://wil098.github.io,http://localhost:5173,https://masvision-web-preview.pages.dev"
+ALLOWED_ORIGINS = "https://wil098.github.io,http://localhost:5173,https://masvision-web-preview.pages.dev,https://opticamasvision.com,https://www.opticamasvision.com"
 WOMPI_ID_BASE_URL = "https://id.wompi.sv"
 WOMPI_API_BASE_URL = "https://api.wompi.sv"
 PROJECT_ID = "masvision-web"
