@@ -171,10 +171,38 @@
       gap: 24px 40px;
       font-size: 14px;
       color: #94a3b8;
+      margin-bottom: 28px;
+    }
+
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      color: #67e8f9;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      padding-bottom: 2px;
+      border-bottom: 1px solid rgba(103, 232, 249, 0.35);
+      transition: color 0.2s ease, border-color 0.2s ease, gap 0.2s ease;
+    }
+
+    .btn-link:hover {
+      color: #a5f3fc;
+      border-color: rgba(165, 243, 252, 0.6);
+      gap: 12px;
     }
 
     .info div {
       display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .info .content {
+      display: flex;
+      flex-direction: column;
       align-items: flex-start;
       gap: 10px;
     }
@@ -277,7 +305,14 @@
         </div>
         <div>
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span>Lun - Vie: 8:00 AM - 5:00 PM<br />Sáb: 8:00 AM - 12:00 PM</span>
+          <div class="content">
+            <span>Lun - Vie: 8:00 AM - 5:00 PM<br />Sáb: 8:00 AM - 12:00 PM</span>
+            <a class="btn-link" href="direcciones.html">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Ver direcciones y cómo llegar
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+          </div>
         </div>
       </div>
     </main>
