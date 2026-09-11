@@ -594,11 +594,7 @@ async function handleAdminCreateProduct(request, env, cors) {
   const { data: product, error } = parseSchema(adminProductSchema, body)
   if (error) {
     logEvent('validation_rejected', { endpoint: 'admin_product_create', error })
-    return jsonResponse(
-      { success: false, message: 'Faltan campos obligatorios (código, nombre, categoría, precio).' },
-      400,
-      cors
-    )
+    return jsonResponse({ success: false, message: `Datos del producto inválidos: ${error}` }, 400, cors)
   }
 
   try {
@@ -624,7 +620,7 @@ async function handleAdminUpdateProduct(request, env, cors, codigo) {
   const { data: product, error } = parseSchema(adminProductSchema, { ...body, codigo })
   if (error) {
     logEvent('validation_rejected', { endpoint: 'admin_product_update', codigo, error })
-    return jsonResponse({ success: false, message: 'Datos del producto inválidos.' }, 400, cors)
+    return jsonResponse({ success: false, message: `Datos del producto inválidos: ${error}` }, 400, cors)
   }
 
   const updated = await updateProduct(env, codigo, product)
