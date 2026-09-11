@@ -21,6 +21,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  renameProductCode,
 } from './productsDb.js'
 import {
   listLensOptions,
@@ -45,6 +46,7 @@ import {
   checkoutItemsSchema,
   addressSchema,
   adminProductSchema,
+  adminRenameProductCodeSchema,
   adminLensOptionSchema,
   adminPromoBlockSchema,
   adminOrderUpdateSchema,
@@ -633,6 +635,31 @@ async function handleAdminUpdateProduct(request, env, cors, codigo) {
   return jsonResponse({ success: true }, 200, cors)
 }
 
+async function handleAdminRenameProductCode(request, env, cors, codigo) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
+  }
+
+  const { data, error } = parseSchema(adminRenameProductCodeSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint: 'admin_product_rename_code', codigo, error })
+    return jsonResponse({ success: false, message: 'Código nuevo inválido.' }, 400, cors)
+  }
+
+  const result = await renameProductCode(env, codigo, data.newCodigo)
+  if (!result.success) {
+    return jsonResponse({ success: false, message: result.message }, 409, cors)
+  }
+  logEvent('admin_product_code_renamed', { oldCodigo: codigo, newCodigo: data.newCodigo })
+  return jsonResponse({ success: true }, 200, cors)
+}
+
 async function handleAdminDeleteProduct(request, env, cors, codigo) {
   const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
   if (errorResponse) return errorResponse
@@ -940,6 +967,11 @@ export default {
 
     if (method === 'POST' && pathname === '/admin/products') {
       return handleAdminCreateProduct(request, env, cors)
+    }
+
+    if (method === 'PUT' && pathname.startsWith('/admin/products/') && pathname.endsWith('/codigo')) {
+      const segments = pathname.split('/')
+      return handleAdminRenameProductCode(request, env, cors, decodeURIComponent(segments[segments.length - 2]))
     }
 
     if (method === 'PUT' && pathname.startsWith('/admin/products/')) {

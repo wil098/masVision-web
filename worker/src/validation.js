@@ -75,6 +75,10 @@ export const adminPromoBlockSchema = z.object({
   position: z.coerce.number().int().positive(),
 })
 
+export const adminRenameProductCodeSchema = z.object({
+  newCodigo: codigo,
+})
+
 export const adminOrderUpdateSchema = z.object({
   courierName: z.string().trim().max(200).optional(),
   trackingNumber: z.string().trim().max(200).optional(),

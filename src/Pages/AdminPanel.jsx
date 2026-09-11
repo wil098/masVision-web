@@ -7,6 +7,7 @@ import {
   createAdminProduct,
   updateAdminProduct,
   deleteAdminProduct,
+  renameAdminProductCode,
   uploadAdminImage,
   fetchAdminOrders,
   updateAdminOrder,
@@ -154,6 +155,29 @@ function ProductForm({ initial, onCancel, onSaved, getIdToken }) {
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [renamingCode, setRenamingCode] = useState(false)
+  const [newCodigo, setNewCodigo] = useState('')
+  const [renamingSaving, setRenamingSaving] = useState(false)
+  const [renameError, setRenameError] = useState(null)
+
+  const handleRenameCode = async () => {
+    setRenameError(null)
+    if (!newCodigo.trim() || newCodigo.trim() === form.codigo) {
+      setRenameError('Escribe un código distinto al actual.')
+      return
+    }
+    setRenamingSaving(true)
+    try {
+      await renameAdminProductCode(form.codigo, newCodigo.trim(), getIdToken)
+      setForm((prev) => ({ ...prev, codigo: newCodigo.trim() }))
+      setRenamingCode(false)
+      setNewCodigo('')
+    } catch (err) {
+      setRenameError(err.message)
+    } finally {
+      setRenamingSaving(false)
+    }
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -268,6 +292,49 @@ function ProductForm({ initial, onCancel, onSaved, getIdToken }) {
             disabled={isEditing}
             className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50"
           />
+          {isEditing && !renamingCode && (
+            <button
+              type="button"
+              onClick={() => {
+                setRenamingCode(true)
+                setNewCodigo(form.codigo)
+              }}
+              className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 mt-1"
+            >
+              Cambiar código
+            </button>
+          )}
+          {isEditing && renamingCode && (
+            <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200 space-y-1.5">
+              <input
+                value={newCodigo}
+                onChange={(e) => setNewCodigo(e.target.value)}
+                placeholder="Nuevo código"
+                className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs"
+              />
+              {renameError && <p className="text-red-500 text-xs">{renameError}</p>}
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRenamingCode(false)
+                    setRenameError(null)
+                  }}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold py-1.5 rounded-lg"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRenameCode}
+                  disabled={renamingSaving}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white text-xs font-semibold py-1.5 rounded-lg"
+                >
+                  {renamingSaving ? 'Guardando...' : 'Guardar código'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1">Categoría</label>

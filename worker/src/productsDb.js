@@ -108,3 +108,21 @@ export async function deleteProduct(env, codigo) {
   const result = await env.DB.prepare(`DELETE FROM products WHERE codigo = ?`).bind(codigo).run()
   return result.meta.changes > 0
 }
+
+// Cambia el código (llave primaria) de un producto ya creado, para corregir
+// un error de tipeo sin perder el resto de sus datos. Los pedidos ya
+// realizados guardan su propia copia del código en el momento de la compra,
+// así que renombrar el producto no los afecta.
+export async function renameProductCode(env, oldCodigo, newCodigo) {
+  const existing = await env.DB.prepare(`SELECT codigo FROM products WHERE codigo = ?`).bind(newCodigo).first()
+  if (existing) {
+    return { success: false, message: 'Ya existe un producto con ese código.' }
+  }
+  const result = await env.DB.prepare(`UPDATE products SET codigo = ? WHERE codigo = ?`)
+    .bind(newCodigo, oldCodigo)
+    .run()
+  if (result.meta.changes === 0) {
+    return { success: false, message: 'Producto no encontrado.' }
+  }
+  return { success: true }
+}

@@ -39,6 +39,14 @@ export async function deleteAdminProduct(codigo, getIdToken) {
   return callJson(`/admin/products/${encodeURIComponent(codigo)}`, { method: 'DELETE' }, getIdToken)
 }
 
+export async function renameAdminProductCode(codigo, newCodigo, getIdToken) {
+  return callJson(
+    `/admin/products/${encodeURIComponent(codigo)}/codigo`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newCodigo }) },
+    getIdToken
+  )
+}
+
 export async function uploadAdminImage(file, getIdToken) {
   const body = new FormData()
   body.append('file', file)
