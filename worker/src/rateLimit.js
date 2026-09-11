@@ -3,7 +3,8 @@
 // bajo concurrencia extrema — para eso se usarían Durable Objects.
 export const RATE_LIMITS = {
   general: { limit: 100, windowSeconds: 900 }, // API pública de lectura
-  sensitive: { limit: 10, windowSeconds: 900 }, // /checkout y mutaciones /admin/*
+  sensitive: { limit: 10, windowSeconds: 900 }, // /checkout (pagos, debe quedarse estricto)
+  admin: { limit: 30, windowSeconds: 900 }, // mutaciones /admin/*, solo accesibles por admins autenticados
   authFailure: { limit: 5, windowSeconds: 900 }, // intentos de auth rechazados por IP
 }
 

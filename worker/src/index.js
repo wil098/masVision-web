@@ -873,7 +873,7 @@ async function handleAdminDeletePromoBlock(request, env, cors, id) {
 // cargar (varias peticiones GET en un solo vistazo).
 function rateLimitBucketFor(method, pathname) {
   if (pathname === '/checkout') return 'sensitive'
-  if (pathname.startsWith('/admin/') && method !== 'GET') return 'sensitive'
+  if (pathname.startsWith('/admin/') && method !== 'GET') return 'admin'
   return 'general'
 }
 
