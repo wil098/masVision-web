@@ -2,11 +2,14 @@ import { z } from 'zod'
 
 const codigo = z.string().trim().min(1).max(100)
 const shortText = z.string().trim().min(1).max(200)
-const longText = z.string().trim().max(2000).optional()
 const price = z.coerce.number().finite().nonnegative().max(1_000_000)
 
+// Acepta string, pero también null/undefined (columnas opcionales de D1
+// llegan como null cuando nunca se llenaron) normalizándolos a ''.
 const optionalText = (max) =>
   z.preprocess((v) => (typeof v === 'string' ? v : ''), z.string().trim().max(max))
+
+const longText = optionalText(2000)
 
 export const checkoutItemSchema = z.object({
   codigo,
@@ -29,7 +32,7 @@ export const addressSchema = z.object({
 
 const colorSchema = z.object({
   nombre: z.string().trim().min(1).max(100),
-  hex: z.string().trim().max(20).optional(),
+  hex: optionalText(20),
   images: z.array(z.string().trim().max(2000)).max(20).optional().default([]),
 })
 
@@ -46,9 +49,9 @@ export const adminProductSchema = z.object({
   price,
   brand: shortText,
   description: longText,
-  material: z.string().trim().max(200).optional(),
-  forma: z.string().trim().max(200).optional(),
-  caracteristicas: z.string().trim().max(2000).optional(),
+  material: optionalText(200),
+  forma: optionalText(200),
+  caracteristicas: optionalText(2000),
   colores_disponibles: z.array(colorSchema).max(50).optional().default([]),
   medidas_disponibles: z.array(medidaSchema).max(50).optional().default([]),
   images: z.array(z.string().trim().max(2000)).max(20).optional().default([]),
