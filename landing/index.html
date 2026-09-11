@@ -167,8 +167,8 @@
 
     .info {
       display: flex;
-      flex-wrap: wrap;
-      gap: 24px 40px;
+      flex-direction: column;
+      gap: 18px;
       font-size: 14px;
       color: #94a3b8;
       margin-bottom: 28px;
@@ -198,18 +198,12 @@
       display: flex;
       align-items: flex-start;
       gap: 10px;
-    }
-
-    .info .content {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
+      line-height: 1.6;
     }
 
     .info .icon {
       color: #22d3ee;
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
     footer {
@@ -254,7 +248,7 @@
 
     @media (max-width: 640px) {
       .wrap { padding: 24px 20px 20px; }
-      .info { gap: 16px 28px; }
+      .info { gap: 14px; }
       footer { flex-direction: column; align-items: flex-start; }
     }
   </style>
@@ -292,6 +286,10 @@
 
       <div class="info">
         <div>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Lun - Vie: 8:00 AM - 5:00 PM<br />Sáb: 8:00 AM - 12:00 PM</span>
+        </div>
+        <div>
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span>
             San Vicente:<br />
@@ -303,17 +301,11 @@
             Sucursal #3 (2397-9044)<br />
           </span>
         </div>
-        <div>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <div class="content">
-            <span>Lun - Vie: 8:00 AM - 5:00 PM<br />Sáb: 8:00 AM - 12:00 PM</span>
-            <a class="btn-link" href="direcciones.html">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              Ver direcciones y cómo llegar
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </a>
-          </div>
-        </div>
+        <a class="btn-link" href="direcciones.html">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Ver direcciones y cómo llegar
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
       </div>
     </main>
 
