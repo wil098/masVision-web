@@ -8,11 +8,13 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Sobre nosotros */}
           <div>
-            <img
-              src="./img/logo.png"
-              alt="Óptica Más Visión"
-              className="h-16 mb-4 brightness-0 invert"
-            />
+            <div className="inline-block bg-white rounded-xl px-4 py-3 mb-4">
+              <img
+                src={`${import.meta.env.BASE_URL}img/logo-mas-vision.png`}
+                alt="Óptica Más Visión"
+                className="h-14 w-auto object-contain"
+              />
+            </div>
             <p className="text-gray-400 text-sm leading-relaxed">
               Tu salud visual es nuestra prioridad. Más de 10 años cuidando la visión de las familias salvadoreñas.
             </p>
@@ -26,15 +28,15 @@ const Footer = () => {
                 <Phone size={18} className="text-cyan-400" />
                 +503 7149-7972
               </a>
-              <a href="mailto:contacto@opticamvision.com" className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors">
+              <a href="mailto:contacto@opticamasvision.com" className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors">
                 <Mail size={18} className="text-cyan-400" />
-                contacto@opticamvision.com
+                contacto@opticamasvision.com
               </a>
               <div className="flex items-start gap-3 text-gray-400">
                 <Clock size={18} className="text-cyan-400 mt-0.5" />
                 <div>
-                  <p>Lun - Sáb: 8:00 AM - 6:00 PM</p>
-                  <p>Dom: 9:00 AM - 1:00 PM</p>
+                  <p>Lun - Vie: 8:00 AM - 5:00 PM</p>
+                  <p>Sáb: 8:00 AM - 12:00 MD</p>
                 </div>
               </div>
             </div>
@@ -55,6 +57,10 @@ const Footer = () => {
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-cyan-400 mt-0.5 flex-shrink-0" />
                 <p>Sucursal 2: Zacatecoluca</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <MapPin size={18} className="text-cyan-400 mt-0.5 flex-shrink-0" />
+                <p>Sucursal 3: Cojutepeque</p>
               </div>
             </div>
           </div>
