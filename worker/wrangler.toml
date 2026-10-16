@@ -6,7 +6,7 @@ compatibility_date = "2026-07-27"
 # se configura como secreto con `wrangler secret put RESEND_API_KEY`.
 [vars]
 FROM_EMAIL = "Óptica Más Visión <pedidos@opticamasvision.com>"
-DESTINATION_EMAIL = "wilfredoangel1@gmail.com"
+DESTINATION_EMAIL = "ubaldobaires@gmail.com"
 # A quién avisa Wompi (por su cuenta) de cada venta: el dueño del comercio.
 WOMPI_NOTIFY_EMAIL = "ubaldobaires@gmail.com"
 ALLOWED_ORIGINS = "https://wil098.github.io,http://localhost:5173,https://masvision-web-preview.pages.dev,https://opticamasvision.com,https://www.opticamasvision.com"
