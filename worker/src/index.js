@@ -170,7 +170,7 @@ async function createWompiPaymentLink(env, token, { orderId, monto, nombreProduc
       configuracion: {
         urlWebhook,
         urlRedirect,
-        emailsNotificacion: env.DESTINATION_EMAIL,
+        emailsNotificacion: env.WOMPI_NOTIFY_EMAIL,
       },
       limitesDeUso: { cantidadMaximaPagosExitosos: 1 },
     }),

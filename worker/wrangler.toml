@@ -5,8 +5,10 @@ compatibility_date = "2026-07-27"
 # Variables públicas (no sensibles). El API key de Resend NO va aquí:
 # se configura como secreto con `wrangler secret put RESEND_API_KEY`.
 [vars]
-FROM_EMAIL = "onboarding@resend.dev"
+FROM_EMAIL = "Óptica Más Visión <pedidos@opticamasvision.com>"
 DESTINATION_EMAIL = "wilfredoangel1@gmail.com"
+# A quién avisa Wompi (por su cuenta) de cada venta: el dueño del comercio.
+WOMPI_NOTIFY_EMAIL = "ubaldobaires@gmail.com"
 ALLOWED_ORIGINS = "https://wil098.github.io,http://localhost:5173,https://masvision-web-preview.pages.dev,https://opticamasvision.com,https://www.opticamasvision.com"
 WOMPI_ID_BASE_URL = "https://id.wompi.sv"
 WOMPI_API_BASE_URL = "https://api.wompi.sv"
