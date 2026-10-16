@@ -12,7 +12,7 @@ const FEATURES = [
     image: 'hero-modelo.png',
   },
   {
-    to: '/sucursales',
+    to: '/examenes-de-la-vista',
     label: 'Exámenes de Vista',
     image: 'exam.jpg',
   },

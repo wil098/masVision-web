@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Glasses, Home, MapPin, Menu, Percent, Sun, X, Phone, ShoppingCart, User, LogOut, Settings } from "lucide-react"
+import { Glasses, Home, MapPin, Menu, Sun, X, Phone, ShoppingCart, User, LogOut, Settings } from "lucide-react"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
 import CartSidebar from "./CartSidebar.jsx"
@@ -45,7 +45,6 @@ const Navbar = () => {
     { to: "/aros-de-sol", icon: Sun, label: "Lentes de Sol" },
     { to: "/aros-oftalmicos", icon: Glasses, label: "Aros" },
     { to: "/sucursales", icon: MapPin, label: "Sucursales" },
-    { to: "/ofertas", icon: Percent, label: "Ofertas" },
   ]
 
   return (

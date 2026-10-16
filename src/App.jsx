@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './Pages/Home';
 import ArosSol from './Pages/ArosSol';
 import ArosOftalmicos from './Pages/ArosOftalmicos';
-import Ofertas from './Pages/Ofertas';
+import ExamenesVista from './Pages/ExamenesVista';
 import MiCuenta from './Pages/MiCuenta';
 import AdminPanel from './Pages/AdminPanel';
 import ProductoDetalle from './Pages/ProductoDetalle';
@@ -23,7 +23,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/aros-de-sol" element={<ArosSol />} />
           <Route path="/aros-oftalmicos" element={<ArosOftalmicos />} />
-          <Route path="/ofertas" element={<Ofertas />} />
+          <Route path="/examenes-de-la-vista" element={<ExamenesVista />} />
           <Route path="/mi-cuenta" element={<MiCuenta />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/producto/:codigo" element={<ProductoDetalle />} />

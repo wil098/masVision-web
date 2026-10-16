@@ -40,11 +40,11 @@ const HeroSection = () => {
             </a>
 
             <Link
-              to="/ofertas"
+              to="/examenes-de-la-vista"
               className="inline-flex items-center justify-center gap-2 bg-transparent border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white/10 transition-colors"
             >
               <Eye size={20} />
-              Ver promociones
+              Exámenes de la vista
             </Link>
           </div>
         </div>
