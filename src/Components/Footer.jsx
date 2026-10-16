@@ -1,4 +1,4 @@
-import { Phone, Mail, MapPin, Instagram, Facebook, Clock } from "lucide-react"
+import { Phone, MessageCircle, MapPin, Instagram, Facebook, Clock } from "lucide-react"
 
 const Footer = () => {
   return (
@@ -24,13 +24,9 @@ const Footer = () => {
           <div>
             <h4 className="text-white font-bold text-lg mb-4">Contacto</h4>
             <div className="space-y-3 text-sm">
-              <a href="tel:+50371497972" className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors">
-                <Phone size={18} className="text-cyan-400" />
-                +503 7149-7972
-              </a>
-              <a href="mailto:contacto@opticamasvision.com" className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors">
-                <Mail size={18} className="text-cyan-400" />
-                contacto@opticamasvision.com
+              <a href="https://wa.me/50371497972" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors">
+                <MessageCircle size={18} className="text-cyan-400" />
+                WhatsApp: +503 7149-7972
               </a>
               <div className="flex items-start gap-3 text-gray-400">
                 <Clock size={18} className="text-cyan-400 mt-0.5" />
@@ -48,19 +44,19 @@ const Footer = () => {
             <div className="space-y-3 text-sm text-gray-400">
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-cyan-400 mt-0.5 flex-shrink-0" />
-                <p>Casa Matriz: Parque Infantil, San Vicente</p>
+                <p>Casa Matriz, San Vicente (2393-0403)</p>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-cyan-400 mt-0.5 flex-shrink-0" />
-                <p>Sucursal 1: Barrio El Centro, San Vicente</p>
+                <p>Sucursal 1, San Vicente (2319-2358)</p>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-cyan-400 mt-0.5 flex-shrink-0" />
-                <p>Sucursal 2: Zacatecoluca</p>
+                <p>Sucursal 2, Zacatecoluca (2334-1463)</p>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin size={18} className="text-cyan-400 mt-0.5 flex-shrink-0" />
-                <p>Sucursal 3: Cojutepeque</p>
+                <p>Sucursal 3, Cojutepeque (2397-9044)</p>
               </div>
             </div>
           </div>

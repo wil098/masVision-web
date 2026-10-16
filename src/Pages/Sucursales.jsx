@@ -7,7 +7,7 @@ export default function Ubicaciones() {
       nombre: "Casa Matriz",
       ciudad: "San Vicente",
       direccion: "4 local 3b, 4A Calle Oriente Bis, San Vicente",
-      telefono: "+503 7149-7972",
+      telefono: "2393-0403",
       mapaUrl: "https://maps.app.goo.gl/inmttgdC75NxPR9k9",
       imagen: `${import.meta.env.BASE_URL}img/cas matriz optica.jpg`, // Imagen profesional de tienda/óptica
       tipo: "Sede Central",
@@ -18,7 +18,7 @@ export default function Ubicaciones() {
       nombre: "Sucursal San Vicente",
       ciudad: "San Vicente",
       direccion: "1 Calle Pte local 12, San Vicente",
-      telefono: "+503 7149-7972",
+      telefono: "2319-2358",
       mapaUrl: "https://maps.app.goo.gl/bnGn1JNfsRcyNN5S6",
       imagen: `${import.meta.env.BASE_URL}img/sucursal 1.png`,
       tipo: "Sucursal 1",
@@ -29,7 +29,7 @@ export default function Ubicaciones() {
       nombre: "Sucursal Zacatecoluca",
       ciudad: "Zacatecoluca",
       direccion: "Avenida Juan Vicente Villacorta, Local #12",
-      telefono: "+503 7149-7972",
+      telefono: "2334-1463",
       mapaUrl: "https://maps.app.goo.gl/rv1syUiv2xZfPowC9 ",
       imagen: `${import.meta.env.BASE_URL}img/sucursal 2.png`,
       tipo: "Sucursal 2",
@@ -40,7 +40,7 @@ export default function Ubicaciones() {
       nombre: "Sucursal Cojutepeque",
       ciudad: "Cojutepeque",
       direccion: "Av José María Rivas, Cojutepeque",
-      telefono: "+503 7149-7972",
+      telefono: "2397-9044",
       mapaUrl: "https://maps.app.goo.gl/42YGnDrJoNjqRTq48",
       imagen: `${import.meta.env.BASE_URL}img/sucursal 4.png`,
       tipo: "Sucursal 3",
@@ -101,9 +101,17 @@ export default function Ubicaciones() {
                     {sucursal.nombre}
                   </h3>
 
-                  <p className="text-gray-600 mb-6 leading-relaxed text-sm">
+                  <p className="text-gray-600 mb-3 leading-relaxed text-sm">
                     {sucursal.direccion}
                   </p>
+
+                  <a
+                    href={`tel:+503${sucursal.telefono.replace('-', '')}`}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800 hover:text-cyan-600 mb-6"
+                  >
+                    <Phone size={16} className="text-cyan-600" />
+                    {sucursal.telefono}
+                  </a>
 
                   {/* Horarios Integrados en la Tarjeta */}
                   <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-3 border border-gray-100">

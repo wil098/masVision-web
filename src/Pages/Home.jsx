@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import HeroSection from '../components/HeroSection'
-import ProductCarousel from '../components/ProductCarousel'
-import FeatureGrid from '../components/FeatureGrid'
-import Card from '../components/Card'
+import HeroSection from '../Components/HeroSection'
+import ProductCarousel from '../Components/ProductCarousel'
+import FeatureGrid from '../Components/FeatureGrid'
+import Card from '../Components/Card'
 import { fetchProducts } from '../lib/orderService'
 
 export default function Home() {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import Card from '../components/Card'
-import PromoBlockCard from '../components/PromoBlockCard'
+import Card from '../Components/Card'
+import PromoBlockCard from '../Components/PromoBlockCard'
 import { fetchProducts, fetchPromoBlocks } from '../lib/orderService'
 import { buildGridItems } from '../lib/promoGrid'
 
