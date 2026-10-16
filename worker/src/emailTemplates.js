@@ -81,7 +81,7 @@ export function buildVendorEmailHtml(order) {
 
     ${
       recetaAttachment
-        ? `<p style="margin:16px 0 0 0;color:${BRAND_COLOR};font-size:13px;">📎 Receta médica adjunta: ${escapeHtml(recetaAttachment.filename)}</p>`
+        ? `<p style="margin:16px 0 0 0;color:${BRAND_COLOR};font-size:13px;">📎 Receta médica adjunta: ${escapeHtml(recetaAttachment.filename)}. El cliente espera la cotización de sus lentes.</p>`
         : ''
     }
   `
@@ -90,7 +90,7 @@ export function buildVendorEmailHtml(order) {
 }
 
 export function buildCustomerEmailHtml(order) {
-  const { asunto, resumen, total, nombreCliente } = order
+  const { asunto, resumen, total, nombreCliente, recetaAttachment } = order
 
   const bodyHtml = `
     <p style="margin:0 0 20px 0;color:#111827;font-size:15px;">¡Hola ${escapeHtml(nombreCliente)}! Gracias por tu compra, confirmamos que tu pago fue recibido correctamente.</p>
@@ -102,6 +102,12 @@ export function buildCustomerEmailHtml(order) {
     ${totalRow(total)}
 
     ${shippingAddressHtml(order)}
+
+    ${
+      recetaAttachment
+        ? `<p style="margin:0 0 16px 0;color:#374151;font-size:14px;line-height:1.6;background-color:#ecfeff;border-radius:12px;padding:12px 16px;">Recibimos tu receta. Te enviaremos la cotización de tus lentes por WhatsApp; recuerda que el precio de los aros no incluye lentes: se pagan aparte, solo si aceptas la cotización.</p>`
+        : ''
+    }
 
     <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
       Nos pondremos en contacto contigo muy pronto para coordinar la entrega a la dirección de arriba. Si algo está incorrecto o tienes alguna duda, puedes escribirnos por WhatsApp.

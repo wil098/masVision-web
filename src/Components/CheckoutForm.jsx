@@ -197,9 +197,13 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-            Receta médica <span className="font-normal text-gray-400">(opcional)</span>
+          <label className="block text-sm font-semibold text-gray-800 mb-1">
+            Receta para tus lentes <span className="font-normal text-gray-400">(opcional)</span>
           </label>
+          <p className="text-xs text-gray-500 leading-relaxed mb-2">
+            El precio de los aros no incluye lentes. Si quieres lentes graduados, sube tu receta y te
+            enviaremos la cotización; se pagan aparte, solo si la aceptas.
+          </p>
 
           {recetaFile ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3">
@@ -221,7 +225,7 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
               className="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-200 px-4 py-6 text-center cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/40 transition-colors"
             >
               <Upload size={20} className="text-gray-400" />
-              <span className="text-sm text-gray-600">Sube una foto o PDF de tu fórmula</span>
+              <span className="text-sm text-gray-600">Sube una foto o PDF de tu receta</span>
               <span className="text-xs text-gray-400">JPG, PNG o PDF · máx. 5MB</span>
               <input
                 id="receta"

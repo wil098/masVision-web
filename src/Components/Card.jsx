@@ -16,7 +16,7 @@ function getColorImages(color) {
 export default function Card({ product }) {
   const { addToCart } = useCart()
 
-  const { name, price, brand, images, codigo, colores_disponibles } = product || {}
+  const { name, price, brand, images, codigo, colores_disponibles, categoria } = product || {}
   const [activeImage, setActiveImage] = useState(images?.[0])
 
   useEffect(() => setActiveImage(images?.[0]), [images])
@@ -56,7 +56,10 @@ export default function Card({ product }) {
           </Link>
           <p className="text-xs text-gray-500">{brand}</p>
         </div>
-        <p className="text-base font-semibold text-gray-900 whitespace-nowrap">${price}</p>
+        <div className="text-right shrink-0">
+          <p className="text-base font-semibold text-gray-900 whitespace-nowrap">${price}</p>
+          {categoria === 'oftalmico' && <p className="text-[11px] text-gray-500 whitespace-nowrap">Solo aro</p>}
+        </div>
       </div>
 
       {swatches.length > 0 && (

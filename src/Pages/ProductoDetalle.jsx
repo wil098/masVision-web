@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar } from 'lucide-react'
+import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar, Info } from 'lucide-react'
 import CheckoutForm from '../Components/CheckoutForm'
 import LoginGate from '../Components/LoginGate'
 import OrderConfirmation from '../Components/OrderConfirmation'
@@ -60,7 +60,8 @@ function ProductDetails({
   onSelectLensOption,
   lensOptionsTotal,
 }) {
-  const { name, description, price, codigo, brand, material, forma, caracteristicas, colores_disponibles, medidas_disponibles, images } = product
+  const { name, description, price, codigo, brand, material, forma, caracteristicas, colores_disponibles, medidas_disponibles, images, categoria } = product
+  const esAroOftalmico = categoria === 'oftalmico'
 
   // Si el color elegido tiene fotos propias, la galería las usa a ellas;
   // si no (productos viejos o colores sin fotos asignadas), usa las
@@ -107,10 +108,32 @@ function ProductDetails({
           <p className="text-3xl font-bold text-gray-900 mt-3">
             ${(price + lensOptionsTotal).toFixed(2)}
           </p>
-          {lensOptionsTotal > 0 && (
+          {lensOptionsTotal > 0 ? (
             <p className="text-xs text-gray-500 mt-1">Aro ${price} + personalización de lente ${lensOptionsTotal.toFixed(2)}</p>
+          ) : (
+            esAroOftalmico && <p className="text-sm text-gray-500 mt-1">Precio solo del aro, no incluye lentes</p>
           )}
         </div>
+
+        {/* Aviso: la tienda vende el aro; los lentes graduados se cotizan aparte con la receta. */}
+        {esAroOftalmico && (
+          <div className="flex gap-3 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-4">
+            <Info size={20} className="text-cyan-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-gray-700 leading-relaxed space-y-1.5">
+              <p className="font-semibold text-gray-900">¿Necesitas lentes graduados?</p>
+              <p>
+                Este precio es únicamente del aro. Al hacer tu pedido, sube tu receta y te enviaremos la
+                cotización de tus lentes. Los lentes se pagan aparte, solo si aceptas la cotización.
+              </p>
+              <p>
+                ¿No tienes receta?{' '}
+                <Link to="/examenes-de-la-vista" className="font-semibold text-cyan-700 hover:text-cyan-800 underline underline-offset-2">
+                  Agenda tu examen de la vista
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Ficha técnica */}
         <div className="grid grid-cols-2 gap-3 text-sm">
