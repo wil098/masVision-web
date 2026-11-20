@@ -51,7 +51,7 @@ const Navbar = () => {
     <>
       <nav
         className={`w-full fixed top-0 z-50 transition-colors duration-300 ${
-          transparent ? "bg-transparent" : "bg-white shadow-md"
+          transparent ? "bg-transparent" : "bg-white/85 backdrop-blur-md shadow-sm border-b border-gray-100"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -72,10 +72,15 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`font-medium transition-colors ${
+                  aria-current={location.pathname === link.to ? "page" : undefined}
+                  className={`relative font-semibold text-[15px] transition-colors after:absolute after:left-0 after:-bottom-1.5 after:h-0.5 after:rounded-full after:bg-cyan-500 after:transition-all after:duration-300 ${
+                    location.pathname === link.to ? "after:w-full" : "after:w-0 hover:after:w-full"
+                  } ${
                     transparent
                       ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:text-cyan-200"
-                      : "text-gray-700 hover:text-cyan-600"
+                      : location.pathname === link.to
+                        ? "text-gray-900"
+                        : "text-gray-600 hover:text-gray-900"
                   }`}
                   onClick={() => setOpen(false)}
                 >
@@ -86,7 +91,7 @@ const Navbar = () => {
               {/* Botón de Carrito (Escritorio) */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className={`relative p-2.5 rounded-xl transition-all ${
+                className={`relative p-2.5 rounded-full transition-all ${
                   transparent
                     ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:bg-white/10"
                     : "text-gray-700 hover:text-cyan-600 hover:bg-gray-50"
@@ -95,7 +100,7 @@ const Navbar = () => {
               >
                 <ShoppingCart size={24} />
                 {cartCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow-sm animate-pulse">
+                  <span className="absolute top-0 right-0 bg-cyan-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm ring-2 ring-white">
                     {cartCount}
                   </span>
                 )}
@@ -105,7 +110,7 @@ const Navbar = () => {
                 href="https://wa.me/50371497972"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-cyan-700 transition-colors shadow-md shadow-cyan-100"
+                className="flex items-center gap-2 bg-cyan-600 text-white px-5 py-2.5 rounded-full font-semibold hover:bg-cyan-700 transition-colors shadow-md shadow-cyan-600/20"
               >
                 <Phone size={18} />
                 Contáctanos
@@ -164,7 +169,7 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={signInWithGoogle}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold transition-colors ${
                     transparent
                       ? "border border-white/70 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:bg-white/10"
                       : "border border-gray-200 text-gray-700 hover:bg-gray-50"

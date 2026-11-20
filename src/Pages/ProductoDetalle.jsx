@@ -74,38 +74,43 @@ function ProductDetails({
   const citaUrl = `https://wa.me/50371497972?text=${encodeURIComponent(citaMessage)}`
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:pt-6">
       {/* Galería */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 aspect-square flex items-center justify-center p-8 rounded-2xl">
+      <div className="lg:sticky lg:top-28 lg:self-start">
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 aspect-square flex items-center justify-center p-6 sm:p-10 rounded-3xl">
         <img
+          key={activeImages?.[selectedImage] ?? activeImages?.[0]}
           src={activeImages?.[selectedImage] ?? activeImages?.[0]}
           alt={name}
-          className="max-h-full max-w-full object-contain"
+          className="max-h-full max-w-full object-contain mix-blend-multiply animate-fade-up"
         />
       </div>
       {activeImages?.length > 1 && (
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-2 pt-4 overflow-x-auto no-scrollbar">
           {activeImages.map((img, idx) => (
             <button
               key={img}
               type="button"
               onClick={() => onSelectImage(idx)}
-              className={`w-14 h-14 rounded-xl border-2 p-1.5 bg-white transition-all ${
+              className={`w-16 h-16 shrink-0 rounded-2xl border-2 p-1.5 bg-gray-50 transition-all ${
                 selectedImage === idx ? 'border-cyan-600' : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <img src={img} alt={`${name} miniatura ${idx + 1}`} className="w-full h-full object-contain" />
+              <img src={img} alt={`${name} miniatura ${idx + 1}`} className="w-full h-full object-contain mix-blend-multiply" />
             </button>
           ))}
         </div>
       )}
+      </div>
+
+      <div className="flex flex-col">
 
       <div className="py-5 space-y-6">
         {/* Encabezado */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{name}</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">{name}</h2>
           {description && <p className="text-gray-600 text-sm mt-1 leading-relaxed">{description}</p>}
-          <p className="text-3xl font-bold text-gray-900 mt-3">
+          <p className="text-3xl font-extrabold text-gray-900 mt-3">
             ${(price + lensOptionsTotal).toFixed(2)}
           </p>
           {lensOptionsTotal > 0 ? (
@@ -273,7 +278,7 @@ function ProductDetails({
         <button
           type="button"
           onClick={onContinue}
-          className="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3.5 rounded-xl font-semibold shadow-md transition-all"
+          className="w-full bg-gray-900 hover:bg-cyan-700 text-white px-6 py-4 rounded-full font-semibold shadow-lg shadow-gray-900/10 transition-all"
         >
           Continuar con el pedido
         </button>
@@ -285,6 +290,7 @@ function ProductDetails({
         >
           <Calendar size={16} /> Prefiero probármelo en tienda
         </a>
+      </div>
       </div>
     </div>
   )
@@ -431,7 +437,7 @@ export default function ProductoDetalle() {
 
   return (
     <section className="min-h-screen pt-28 pb-16 px-4 bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className={`${step === 'detalle' ? 'max-w-6xl' : 'max-w-2xl'} mx-auto bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden`}>
         {/* Cabecera */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           {step === 'checkout' ? (
@@ -454,7 +460,7 @@ export default function ProductoDetalle() {
           </button>
         </div>
 
-        <div className="px-6 pb-6">
+        <div className={step === 'detalle' ? 'px-5 sm:px-8 lg:px-10 pb-8' : 'px-6 pb-6'}>
           {step === 'confirmacion' && <OrderConfirmation onClose={() => navigate(-1)} />}
 
           {step === 'detalle' && (
