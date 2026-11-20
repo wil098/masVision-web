@@ -12,7 +12,35 @@ export function getClientIp(request) {
   return request.headers.get('CF-Connecting-IP') || 'unknown'
 }
 
+// Bindings de Workers Rate Limiting (contadores en memoria de Cloudflare,
+// sin costo ni escrituras de KV). Ver [[ratelimits]] en wrangler.toml.
+const RATE_LIMIT_BINDINGS = {
+  general: 'RL_GENERAL',
+  sensitive: 'RL_SENSITIVE',
+  admin: 'RL_ADMIN',
+}
+
 export async function checkRateLimit(env, bucket, identifier) {
+  const binding = env[RATE_LIMIT_BINDINGS[bucket]]
+  if (binding) {
+    try {
+      const { success } = await binding.limit({ key: `${bucket}:${identifier}` })
+      return { allowed: success, resetAt: Date.now() + 60_000 }
+    } catch {
+      // Si el servicio de rate limiting falla, no se tumba la tienda.
+      return { allowed: true, resetAt: Date.now() }
+    }
+  }
+  try {
+    return await checkKvRateLimit(env, bucket, identifier)
+  } catch {
+    // KV con la cuota diaria agotada (u otro error) no debe dejar la tienda
+    // sin responder: se deja pasar la petición.
+    return { allowed: true, resetAt: Date.now() }
+  }
+}
+
+async function checkKvRateLimit(env, bucket, identifier) {
   const { limit, windowSeconds } = RATE_LIMITS[bucket]
   const key = `ratelimit:${bucket}:${identifier}`
   const now = Date.now()
@@ -39,12 +67,21 @@ export async function checkRateLimit(env, bucket, identifier) {
 // tokens inválidos, bloquea antes de siquiera intentar verificar el token.
 export async function isAuthBlocked(env, ip) {
   const key = `ratelimit:authFailure:${ip}`
-  const raw = await env.ORDERS_KV.get(key)
+  let raw = null
+  try {
+    raw = await env.ORDERS_KV.get(key)
+  } catch {
+    return false
+  }
   if (!raw) return false
   const entry = JSON.parse(raw)
   return entry.resetAt > Date.now() && entry.count >= RATE_LIMITS.authFailure.limit
 }
 
 export async function recordAuthFailure(env, ip) {
-  return checkRateLimit(env, 'authFailure', ip)
+  try {
+    return await checkKvRateLimit(env, 'authFailure', ip)
+  } catch {
+    return null
+  }
 }

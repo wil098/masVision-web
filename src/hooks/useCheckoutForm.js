@@ -34,6 +34,7 @@ export function useCheckoutForm() {
   const [newAddress, setNewAddress] = useState(EMPTY_ADDRESS)
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [guardarDireccion, setGuardarDireccion] = useState(true)
+  const [aceptaMarketing, setAceptaMarketing] = useState(false)
   const [recetaFile, setRecetaFile] = useState(null)
   const [errors, setErrors] = useState({})
 
@@ -44,6 +45,7 @@ export function useCheckoutForm() {
     setNewAddress(EMPTY_ADDRESS)
     setShowNewAddressForm(false)
     setGuardarDireccion(true)
+    setAceptaMarketing(false)
     setRecetaFile(null)
     setErrors({})
   }
@@ -101,6 +103,7 @@ export function useCheckoutForm() {
   const validate = () => {
     const newErrors = {}
     if (!telefono.trim()) newErrors.telefono = 'Ingresa tu teléfono.'
+    else if (!/^[0-9+()\s-]{8,20}$/.test(telefono.trim())) newErrors.telefono = 'Ingresa un teléfono válido (ej. 7149-7972).'
 
     if (usingNewAddress) {
       if (!newAddress.departamento.trim()) newErrors.departamento = 'Selecciona un departamento.'
@@ -129,6 +132,8 @@ export function useCheckoutForm() {
     usingNewAddress,
     guardarDireccion,
     setGuardarDireccion,
+    aceptaMarketing,
+    setAceptaMarketing,
     recetaFile,
     handleFileChange,
     removeFile,

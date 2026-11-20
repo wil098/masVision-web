@@ -15,6 +15,8 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
     usingNewAddress,
     guardarDireccion,
     setGuardarDireccion,
+    aceptaMarketing,
+    setAceptaMarketing,
     recetaFile,
     handleFileChange,
     removeFile,
@@ -240,6 +242,16 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
           {errors.receta && <p className="text-red-500 text-xs mt-1">{errors.receta}</p>}
         </div>
       </div>
+
+      <label className="flex items-start gap-3 mt-6 text-sm text-gray-600 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={aceptaMarketing}
+          onChange={(e) => setAceptaMarketing(e.target.checked)}
+          className="mt-0.5 rounded"
+        />
+        <span>Quiero recibir por correo ofertas y nuevas colecciones de Óptica Más Visión. Puedo darme de baja cuando quiera.</span>
+      </label>
 
       <div className="sticky bottom-0 mt-6 pt-4 border-t border-gray-100">
         <button

@@ -67,6 +67,10 @@ export async function updateAdminOrder(orderId, updates, getIdToken) {
   )
 }
 
+export async function sendAdminTestEmail(getIdToken) {
+  return callJson('/admin/test-email', { method: 'POST' }, getIdToken)
+}
+
 export async function fetchAdminCustomers(getIdToken) {
   const result = await callJson('/admin/customers', { method: 'GET' }, getIdToken)
   return result.customers

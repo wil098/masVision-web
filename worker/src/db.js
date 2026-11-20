@@ -8,6 +8,48 @@ export async function upsertUser(env, { uid, email, name }) {
     .run()
 }
 
+// Marca la bienvenida como enviada de forma atómica: devuelve true solo la
+// primera vez, así dos peticiones simultáneas no mandan dos correos.
+export async function claimWelcomeEmail(env, uid) {
+  const result = await env.DB.prepare(
+    `UPDATE users SET email_bienvenida_enviado = 1 WHERE id = ? AND email_bienvenida_enviado = 0`
+  )
+    .bind(uid)
+    .run()
+  return result.meta.changes > 0
+}
+
+export async function getUser(env, uid) {
+  return env.DB.prepare(`SELECT * FROM users WHERE id = ?`).bind(uid).first()
+}
+
+export async function setMarketingConsent(env, uid, acepta) {
+  await env.DB.prepare(`UPDATE users SET acepta_marketing = ?, marketing_actualizado_at = ? WHERE id = ?`)
+    .bind(acepta ? 1 : 0, new Date().toISOString(), uid)
+    .run()
+}
+
+export async function getOrder(env, orderId) {
+  return env.DB.prepare(`SELECT * FROM orders WHERE id = ?`).bind(orderId).first()
+}
+
+// Igual que la bienvenida: reclama el envío de un correo de pedido de forma
+// atómica para que los reintentos del webhook no dupliquen correos.
+export async function claimOrderEmail(env, orderId, column) {
+  if (!['email_vendedor_enviado', 'email_cliente_enviado', 'email_envio_enviado'].includes(column)) {
+    throw new Error(`Columna de correo inválida: ${column}`)
+  }
+  const result = await env.DB.prepare(`UPDATE orders SET ${column} = 1, updated_at = ? WHERE id = ? AND ${column} = 0`)
+    .bind(new Date().toISOString(), orderId)
+    .run()
+  return result.meta.changes > 0
+}
+
+export async function releaseOrderEmail(env, orderId, column) {
+  if (!['email_vendedor_enviado', 'email_cliente_enviado', 'email_envio_enviado'].includes(column)) return
+  await env.DB.prepare(`UPDATE orders SET ${column} = 0 WHERE id = ?`).bind(orderId).run()
+}
+
 export async function listAddresses(env, userId) {
   const { results } = await env.DB.prepare(
     `SELECT * FROM addresses WHERE user_id = ? ORDER BY es_predeterminada DESC, created_at DESC`
@@ -134,7 +176,7 @@ export async function updateOrderTracking(env, orderId, { courierName, trackingN
 
 export async function listCustomers(env) {
   const { results } = await env.DB.prepare(
-    `SELECT u.id, u.email, u.nombre, u.created_at, u.is_admin,
+    `SELECT u.id, u.email, u.nombre, u.created_at, u.is_admin, u.acepta_marketing, u.marketing_actualizado_at,
             COUNT(o.id) as total_pedidos,
             COALESCE(SUM(CASE WHEN o.status = 'pagado' THEN o.total ELSE 0 END), 0) as total_gastado
      FROM users u LEFT JOIN orders o ON o.user_id = u.id

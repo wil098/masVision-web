@@ -1,3 +1,4 @@
+import { usePageMeta, SITE_URL } from '../lib/seo'
 import { useEffect, useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import Card, { CardSkeleton } from './Card'
@@ -45,13 +46,32 @@ function groupByColeccion(items) {
   return groups
 }
 
-export default function CatalogPage({ categoria, promoPage, eyebrow, title, subtitle, image, imagePosition = 'center' }) {
+export default function CatalogPage({ categoria, promoPage, eyebrow, title, subtitle, image, imagePosition = 'center', path, seoDescription }) {
   const [productos, setProductos] = useState([])
   const [promoBlocks, setPromoBlocks] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [material, setMaterial] = useState('todos')
   const [sort, setSort] = useState('relevancia')
+
+  usePageMeta({
+    title,
+    description: seoDescription || subtitle,
+    path,
+    jsonLd: productos.length
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name: title,
+          itemListElement: productos.slice(0, 50).map((p, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `${SITE_URL}/producto/${encodeURIComponent(p.codigo)}`,
+            name: p.name,
+          })),
+        }
+      : null,
+  })
 
   useEffect(() => {
     Promise.all([

@@ -208,6 +208,7 @@ export default function CartSidebar() {
       address: checkout.usingNewAddress ? checkout.newAddress : null,
       guardarDireccion: checkout.guardarDireccion,
       recetaFile: checkout.recetaFile,
+      aceptaMarketing: checkout.aceptaMarketing,
     }
 
     setIsSubmitting(true)

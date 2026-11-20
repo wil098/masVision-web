@@ -1,3 +1,4 @@
+import { usePageMeta } from '../lib/seo'
 import { useEffect, useState } from 'react'
 import {
   Calendar,
@@ -154,6 +155,12 @@ function EstadoBadge({ estado, className = '' }) {
 }
 
 export default function Sucursales() {
+  usePageMeta({
+    title: 'Sucursales y horarios',
+    description:
+      'Óptica Más Visión en San Vicente (2 sucursales), Zacatecoluca y Cojutepeque. Direcciones, teléfonos, horarios y cómo llegar.',
+    path: '/sucursales',
+  })
   const estado = useEstadoApertura()
   const [activaId, setActivaId] = useState(SUCURSALES[0].id)
   const [faqAbierta, setFaqAbierta] = useState(0)

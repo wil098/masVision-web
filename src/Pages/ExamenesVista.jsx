@@ -1,3 +1,4 @@
+import { usePageMeta } from '../lib/seo'
 import {
   AlertCircle,
   ArrowRight,
@@ -171,6 +172,13 @@ function SectionTitle({ eyebrow, title, children }) {
 }
 
 export default function ExamenesVista() {
+  usePageMeta({
+    title: 'Exámenes de la vista',
+    description:
+      'Examen de la vista con optometristas en San Vicente, Zacatecoluca y Cojutepeque. Conoce cada cuánto revisarte, qué incluye y agenda tu cita por WhatsApp.',
+    path: '/examenes-de-la-vista',
+    type: 'article',
+  })
   return (
     <article className="min-h-screen bg-white">
       {/* Portada */}

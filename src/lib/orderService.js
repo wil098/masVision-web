@@ -71,8 +71,27 @@ export async function fetchLensOptions() {
 // El precio SIEMPRE se calcula del lado del servidor a partir del código de
 // cada producto — nunca se manda un total desde el navegador (así se evita
 // que alguien pague un monto distinto al real).
-export async function createPaymentLink({ items, telefono, addressId, address, guardarDireccion, recetaFile }, getIdToken) {
+export async function updatePreferences({ aceptaMarketing }, getIdToken) {
   const apiBase = requireApiBase()
+  const response = await authFetch(
+    `${apiBase}/api/me/preferencias`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aceptaMarketing }) },
+    getIdToken
+  )
+  const result = await response.json()
+  if (!result.success) throw new Error(result.message || 'No se pudo guardar tu preferencia.')
+  return result
+}
+
+export async function createPaymentLink({ items, telefono, addressId, address, guardarDireccion, recetaFile, aceptaMarketing }, getIdToken) {
+  const apiBase = requireApiBase()
+
+  // El consentimiento se guarda aparte del pago: si falla, no bloquea la compra.
+  if (aceptaMarketing) {
+    await updatePreferences({ aceptaMarketing: true }, getIdToken).catch((err) =>
+      console.error('No se pudo guardar la preferencia de marketing:', err)
+    )
+  }
 
   const body = new FormData()
   body.append('Items', JSON.stringify(items))

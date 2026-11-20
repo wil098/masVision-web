@@ -14,6 +14,30 @@ WOMPI_ID_BASE_URL = "https://id.wompi.sv"
 WOMPI_API_BASE_URL = "https://api.wompi.sv"
 PROJECT_ID = "masvision-web"
 PUBLIC_JWK_CACHE_KEY = "firebase-public-jwk-cache"
+# URL pública de la tienda (logo y enlaces en los correos) y de este Worker
+# (enlace de baja de marketing). Cambiar al pasar a opticamasvision.com.
+PUBLIC_SITE_URL = "https://wil098.github.io/masVision-web/"
+PUBLIC_API_URL = "https://masvision-order-email.wilfredoangel1.workers.dev"
+
+# El secreto UNSUBSCRIBE_SECRET (firma de enlaces de baja) se configura con
+# `wrangler secret put UNSUBSCRIBE_SECRET`.
+
+# Rate limiting en memoria de Cloudflare (sin escrituras de KV). period solo
+# admite 10 o 60 segundos.
+[[ratelimits]]
+name = "RL_GENERAL"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
+[[ratelimits]]
+name = "RL_SENSITIVE"
+namespace_id = "1002"
+simple = { limit = 5, period = 60 }
+
+[[ratelimits]]
+name = "RL_ADMIN"
+namespace_id = "1003"
+simple = { limit = 60, period = 60 }
 
 # Almacena pedidos pendientes de pago (datos del cliente + receta en base64)
 # mientras el cliente completa el pago en Wompi. Se borran tras confirmarse

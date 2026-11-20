@@ -1,3 +1,4 @@
+import { usePageMeta } from '../lib/seo'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
@@ -9,6 +10,7 @@ import Card, { CardSkeleton } from '../Components/Card'
 import { fetchProducts } from '../lib/orderService'
 
 export default function Home() {
+  usePageMeta({ path: '/' })
   const [nuevaColeccion, setNuevaColeccion] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)

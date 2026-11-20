@@ -1,3 +1,4 @@
+import { usePageMeta } from '../lib/seo'
 import { useEffect, useState } from 'react'
 import { Package, ShoppingBag, Users, Plus, Trash2, Pencil, X, Upload, SlidersHorizontal, Image } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -12,6 +13,7 @@ import {
   fetchAdminOrders,
   updateAdminOrder,
   fetchAdminCustomers,
+  sendAdminTestEmail,
   fetchAdminLensOptions,
   createAdminLensOption,
   updateAdminLensOption,
@@ -664,13 +666,16 @@ function OrderRow({ order, getIdToken, onUpdated }) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateAdminOrder(
+      const result = await updateAdminOrder(
         order.id,
         { courierName: courier, trackingNumber, trackingUrl, status },
         getIdToken
       )
       onUpdated()
       setEditing(false)
+      if (result?.envioNotificado) {
+        window.alert('Guardado. Le avisamos al cliente por correo que su pedido va en camino.')
+      }
     } catch (err) {
       console.error('Error actualizando el pedido:', err)
     } finally {
@@ -786,8 +791,46 @@ function CustomersTab({ getIdToken }) {
 
   if (loading) return <p className="text-sm text-gray-400">Cargando...</p>
 
+  const conMarketing = customers.filter((c) => c.acepta_marketing)
+
+  // CSV para importar en la herramienta de email marketing (Mailchimp,
+  // Brevo, etc.). Solo exporta a quienes aceptaron recibir ofertas.
+  const exportCsv = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = [
+      ['email', 'nombre', 'cliente_desde', 'pedidos', 'total_gastado', 'acepto_marketing_el'],
+      ...conMarketing.map((c) => [
+        c.email,
+        c.nombre || '',
+        (c.created_at || '').slice(0, 10),
+        c.total_pedidos,
+        Number(c.total_gastado).toFixed(2),
+        (c.marketing_actualizado_at || '').slice(0, 10),
+      ]),
+    ]
+    const blob = new Blob(['\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `clientes-marketing-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   return (
     <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+        <p className="text-sm text-gray-500">
+          {customers.length} clientes · {conMarketing.length} aceptan correos de ofertas
+        </p>
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={conMarketing.length === 0}
+          className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white text-sm font-semibold"
+        >
+          Exportar CSV para marketing
+        </button>
+      </div>
       {customers.map((c) => (
         <div key={c.id} className="flex items-center justify-between gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <div className="min-w-0">
@@ -795,7 +838,10 @@ function CustomersTab({ getIdToken }) {
               {c.nombre || c.email} {Boolean(c.is_admin) && <span className="text-xs text-cyan-600 font-bold">· ADMIN</span>}
             </p>
             <p className="text-xs text-gray-500">{c.email}</p>
-            <p className="text-xs text-gray-400">Cliente desde {new Date(c.created_at).toLocaleDateString('es-SV')}</p>
+            <p className="text-xs text-gray-400">
+              Cliente desde {new Date(c.created_at).toLocaleDateString('es-SV')}
+              {c.acepta_marketing ? <span className="ml-2 text-emerald-600 font-semibold">· Acepta ofertas</span> : null}
+            </p>
           </div>
           <div className="text-right shrink-0">
             <p className="text-sm font-bold text-gray-900">{c.total_pedidos} pedidos</p>
@@ -1283,8 +1329,41 @@ function PromoBlocksTab({ getIdToken }) {
 }
 
 /* ---------- Componente principal ---------- */
+function TestEmailButton({ getIdToken }) {
+  const [state, setState] = useState('idle') // idle | sending | done | error
+  const [detail, setDetail] = useState('')
+
+  const send = async () => {
+    setState('sending')
+    try {
+      const r = await sendAdminTestEmail(getIdToken)
+      const fallos = Object.entries(r.results || {}).filter(([, v]) => v !== 'enviado')
+      setState(fallos.length ? 'error' : 'done')
+      setDetail(fallos.length ? fallos.map(([k, v]) => `${k}: ${v}`).join(' · ') : `Revisa ${r.to} (también Spam/Promociones).`)
+    } catch (err) {
+      setState('error')
+      setDetail(err.message)
+    }
+  }
+
+  return (
+    <div className="text-right">
+      <button
+        type="button"
+        onClick={send}
+        disabled={state === 'sending'}
+        className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 disabled:opacity-60"
+      >
+        {state === 'sending' ? 'Enviando…' : 'Enviarme correos de prueba'}
+      </button>
+      {detail && <p className={`text-xs mt-1 max-w-xs ${state === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>{detail}</p>}
+    </div>
+  )
+}
+
 export default function AdminPanel() {
   const { user, isAdmin, loading, getIdToken } = useAuth()
+  usePageMeta({ title: 'Administración', path: '/admin', noindex: true })
   const [tab, setTab] = useState('productos')
 
   if (loading) return null
@@ -1313,7 +1392,10 @@ export default function AdminPanel() {
   return (
     <section className="min-h-screen pt-28 pb-16 bg-gradient-to-b from-gray-50 to-white px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Panel de administración</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Panel de administración</h1>
+          <TestEmailButton getIdToken={getIdToken} />
+        </div>
 
         <div className="flex gap-1 mb-8 border-b border-gray-200">
           {TABS.map((tabItem) => (

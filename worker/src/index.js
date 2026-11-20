@@ -1,9 +1,13 @@
-import { buildVendorEmailHtml, buildCustomerEmailHtml } from './emailTemplates.js'
+import {
+  buildVendorEmailHtml,
+  buildCustomerEmailHtml,
+  buildShippedEmailHtml,
+  buildWelcomeEmailHtml,
+  buildUnsubscribePageHtml,
+} from './emailTemplates.js'
 import {
   insertPendingOrder,
   markOrderStatus,
-  markVendorEmailSent,
-  markCustomerEmailSent,
   upsertUser,
   listAddresses,
   getAddress,
@@ -13,6 +17,12 @@ import {
   listAllOrders,
   updateOrderTracking,
   listCustomers,
+  claimWelcomeEmail,
+  getUser,
+  setMarketingConsent,
+  getOrder,
+  claimOrderEmail,
+  releaseOrderEmail,
 } from './db.js'
 import {
   listProducts,
@@ -41,6 +51,7 @@ import {
 import { logEvent, logError } from './logger.js'
 import { requireUser, requireAdmin } from './auth.js'
 import { checkRateLimit, getClientIp, isAuthBlocked, recordAuthFailure } from './rateLimit.js'
+import { verifyUnsubscribeToken, buildUnsubscribeUrl, timingSafeEqualHex } from './tokens.js'
 import { securityHeaders, assertEnvIsConfigured } from './security.js'
 import {
   checkoutItemsSchema,
@@ -72,14 +83,41 @@ async function authenticateOrRespond(request, env, cors) {
     logEvent('auth_blocked_rate_limit', { ip })
     return { errorResponse: jsonResponse({ success: false, message: 'Demasiados intentos fallidos. Intenta más tarde.' }, 429, cors) }
   }
+  let user
   try {
-    const user = await requireUser(request, env)
+    user = await requireUser(request, env)
     await upsertUser(env, user)
-    return { user }
   } catch (err) {
     await recordAuthFailure(env, ip)
     logEvent('auth_failed', { ip, reason: err.message })
     return { errorResponse: jsonResponse({ success: false, message: err.message }, err.status || 401, cors) }
+  }
+  await maybeSendWelcomeEmail(env, user)
+  return { user }
+}
+
+// Primera vez que un cliente inicia sesión: correo de bienvenida. Nunca
+// bloquea ni rompe la petición original si el correo falla.
+async function maybeSendWelcomeEmail(env, user) {
+  if (!user?.email) return
+  try {
+    if (!(await claimWelcomeEmail(env, user.uid))) return
+    const row = await getUser(env, user.uid)
+    await sendResendMessage(env, {
+      from: env.FROM_EMAIL,
+      to: user.email,
+      reply_to: env.DESTINATION_EMAIL,
+      subject: 'Bienvenido a Óptica Más Visión',
+      html: buildWelcomeEmailHtml({
+        nombre: user.name,
+        siteUrl: env.PUBLIC_SITE_URL,
+        aceptaMarketing: Boolean(row?.acepta_marketing),
+        unsubscribeUrl: await buildUnsubscribeUrl(env, user.uid),
+      }),
+    })
+    logEvent('welcome_email_sent', { userId: user.uid })
+  } catch (err) {
+    logError('welcome_email_failed', err, { userId: user.uid })
   }
 }
 
@@ -206,7 +244,7 @@ async function sendVendorEmail(env, order) {
     to: env.DESTINATION_EMAIL,
     reply_to: order.correoCliente,
     subject: `Pago confirmado: ${order.asunto}`,
-    html: buildVendorEmailHtml(order),
+    html: buildVendorEmailHtml(order, { siteUrl: env.PUBLIC_SITE_URL }),
   }
   if (order.recetaAttachment) {
     payload.attachments = [order.recetaAttachment]
@@ -218,9 +256,58 @@ async function sendCustomerEmail(env, order) {
   await sendResendMessage(env, {
     from: env.FROM_EMAIL,
     to: order.correoCliente,
-    subject: 'Tu pedido en Óptica MasVision fue confirmado',
-    html: buildCustomerEmailHtml(order),
+    reply_to: env.DESTINATION_EMAIL,
+    subject: `Pedido confirmado #${String(order.id).slice(0, 8).toUpperCase()} · Óptica Más Visión`,
+    html: buildCustomerEmailHtml(order, { siteUrl: env.PUBLIC_SITE_URL }),
   })
+}
+
+async function sendShippedEmail(env, orderRow) {
+  await sendResendMessage(env, {
+    from: env.FROM_EMAIL,
+    to: orderRow.correo_cliente,
+    reply_to: env.DESTINATION_EMAIL,
+    subject: `Tu pedido va en camino · Óptica Más Visión`,
+    html: buildShippedEmailHtml(orderRow, { siteUrl: env.PUBLIC_SITE_URL }),
+  })
+}
+
+// Reconstruye el pedido desde D1 cuando la caché de KV (que guarda la receta
+// mientras el cliente paga, 1 hora) ya venció: así los correos salen igual,
+// solo que sin el archivo adjunto.
+function orderFromRow(row) {
+  return {
+    id: row.id,
+    asunto: row.asunto,
+    resumen: row.resumen,
+    total: row.total,
+    nombreCliente: row.nombre_cliente,
+    telefono: row.telefono,
+    correoCliente: row.correo_cliente,
+    departamento: row.departamento,
+    municipio: row.municipio,
+    direccion: row.direccion,
+    referencia: row.referencia,
+    recetaAttachment: null,
+    tieneReceta: Boolean(row.tiene_receta),
+    userId: row.user_id,
+  }
+}
+
+const RECETA_MAX_BYTES = 5 * 1024 * 1024
+const RECETA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
+const UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+const UPLOAD_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif' }
+
+function safeFileName(name, fallback) {
+  const cleaned = String(name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-.]+/, '')
+    .slice(0, 80)
+  return cleaned || fallback
 }
 
 async function handleCheckout(request, env, cors) {
@@ -239,8 +326,27 @@ async function handleCheckout(request, env, cors) {
     return typeof value === 'string' ? value : ''
   }
 
-  const telefono = get('Telefono')
+  const telefono = get('Telefono').trim()
   const siteUrl = get('SiteUrl')
+
+  // El teléfono va al correo y a la base: solo dígitos, espacios, +, - y ().
+  if (!/^[0-9+()\s-]{8,20}$/.test(telefono)) {
+    return jsonResponse({ success: false, message: 'El teléfono no es válido.' }, 400, cors)
+  }
+
+  // SiteUrl define a dónde redirige Wompi después del pago: solo se aceptan
+  // los orígenes del sitio, para que no se pueda usar como redirección abierta.
+  let siteOrigin = ''
+  try {
+    siteOrigin = new URL(siteUrl).origin
+  } catch {
+    /* inválida */
+  }
+  const allowedSiteOrigins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  if (!allowedSiteOrigins.includes(siteOrigin)) {
+    logEvent('checkout_invalid_site_url', { siteUrl: siteUrl.slice(0, 200) })
+    return jsonResponse({ success: false, message: 'Origen del pedido no válido.' }, 400, cors)
+  }
   const file = formData.get('attachment')
   const addressId = get('AddressId')
 
@@ -343,9 +449,16 @@ async function handleCheckout(request, env, cors) {
   logEvent('checkout_received', { orderId, asunto, monto, userId: user.uid })
 
   let recetaAttachment = null
-  if (file && typeof file.arrayBuffer === 'function') {
+  if (file && typeof file.arrayBuffer === 'function' && file.size > 0) {
+    if (file.size > RECETA_MAX_BYTES || !RECETA_TYPES.includes(file.type)) {
+      return jsonResponse(
+        { success: false, message: 'La receta debe ser una foto o PDF de máximo 5 MB.' },
+        400,
+        cors
+      )
+    }
     const buffer = await file.arrayBuffer()
-    recetaAttachment = { filename: file.name || 'receta.jpg', content: arrayBufferToBase64(buffer) }
+    recetaAttachment = { filename: safeFileName(file.name, 'receta'), content: arrayBufferToBase64(buffer) }
   }
 
   const order = {
@@ -379,8 +492,9 @@ async function handleCheckout(request, env, cors) {
       urlRedirect: `${redirectBase}?pedido=${orderId}`,
     }))
   } catch (err) {
+    // El detalle de Wompi queda en los logs; al navegador solo un mensaje genérico.
     logError('checkout_payment_link_error', err, { orderId })
-    return jsonResponse({ success: false, message: err.message || 'No se pudo crear el enlace de pago.' }, 502, cors)
+    return jsonResponse({ success: false, message: 'No pudimos generar el enlace de pago. Intenta de nuevo en unos minutos.' }, 502, cors)
   }
 
   // El pedido solo se guarda una vez que Wompi confirma el enlace de pago:
@@ -398,7 +512,7 @@ async function handleWebhook(request, env) {
   const receivedHash = request.headers.get('wompi_hash') ?? ''
   const expectedHash = await hmacSha256Hex(env.WOMPI_CLIENT_SECRET, rawBody)
 
-  if (!receivedHash || receivedHash.toLowerCase() !== expectedHash.toLowerCase()) {
+  if (!receivedHash || !timingSafeEqualHex(receivedHash.toLowerCase(), expectedHash.toLowerCase())) {
     logEvent('webhook_invalid_signature', {})
     return jsonResponse({ success: false, message: 'Firma inválida.' }, 400, {})
   }
@@ -421,7 +535,15 @@ async function handleWebhook(request, env) {
     return jsonResponse({ success: true }, 200, {})
   }
 
+  const existing = await getOrder(env, orderId)
+  if (!existing) {
+    logEvent('webhook_unknown_order', { orderId })
+    return jsonResponse({ success: true }, 200, {})
+  }
+
   if (!aprobado) {
+    // Un pago ya confirmado no vuelve a "fallido" por un aviso posterior.
+    if (existing.status === 'pagado') return jsonResponse({ success: true }, 200, {})
     await markOrderStatus(env, orderId, 'fallido', wompiTransaccionId)
     logEvent('payment_failed', { orderId })
     return jsonResponse({ success: true }, 200, {})
@@ -432,36 +554,35 @@ async function handleWebhook(request, env) {
   // disponible o no — así el registro nunca se queda desactualizado.
   await markOrderStatus(env, orderId, 'pagado', wompiTransaccionId)
 
+  // Los datos para los correos salen de KV (incluye la receta adjunta) o, si
+  // la caché ya venció, de D1 (sin adjunto). Antes, si el cliente tardaba más
+  // de una hora en pagar, no salía ningún correo.
   const orderRaw = await env.ORDERS_KV.get(orderId)
-  if (!orderRaw) {
-    // El pago quedó registrado, pero ya no tenemos los datos en caché para
-    // armar el correo (venció el TTL o Wompi reintentó el webhook luego de
-    // que ya lo procesamos). Se deja registrado en los logs para revisar.
-    logError('webhook_order_not_found_in_cache', new Error('KV vencido o pedido ya procesado'), { orderId })
-    return jsonResponse({ success: true }, 200, {})
+  const order = orderRaw ? JSON.parse(orderRaw) : orderFromRow(existing)
+  if (!orderRaw) logEvent('webhook_order_from_d1', { orderId })
+
+  // claimOrderEmail marca el correo como enviado de forma atómica, así los
+  // reintentos de Wompi nunca duplican correos.
+  if (await claimOrderEmail(env, orderId, 'email_vendedor_enviado')) {
+    try {
+      await sendVendorEmail(env, order)
+      logEvent('vendor_email_sent', { orderId })
+    } catch (err) {
+      // Se libera la marca y se responde error para que Wompi reintente.
+      await releaseOrderEmail(env, orderId, 'email_vendedor_enviado')
+      logError('vendor_email_failed', err, { orderId })
+      return jsonResponse({ success: false, message: 'No se pudo enviar el aviso.' }, 502, {})
+    }
   }
 
-  const order = JSON.parse(orderRaw)
-
-  try {
-    await sendVendorEmail(env, order)
-    await markVendorEmailSent(env, orderId)
-    logEvent('vendor_email_sent', { orderId })
-  } catch (err) {
-    // No se borra el pedido de KV: así Wompi puede reintentar el webhook más tarde.
-    logError('vendor_email_failed', err, { orderId })
-    return jsonResponse({ success: false, message: err.message }, 502, {})
-  }
-
-  try {
-    await sendCustomerEmail(env, order)
-    await markCustomerEmailSent(env, orderId)
-    logEvent('customer_email_sent', { orderId })
-  } catch (err) {
-    // El aviso al vendedor es lo crítico y ya se envió; el del cliente es
-    // best-effort (por ejemplo, puede fallar si el dominio de envío de
-    // Resend aún no está verificado para mandar a destinatarios externos).
-    logError('customer_email_failed', err, { orderId })
+  if (await claimOrderEmail(env, orderId, 'email_cliente_enviado')) {
+    try {
+      await sendCustomerEmail(env, order)
+      logEvent('customer_email_sent', { orderId })
+    } catch (err) {
+      await releaseOrderEmail(env, orderId, 'email_cliente_enviado')
+      logError('customer_email_failed', err, { orderId })
+    }
   }
 
   await env.ORDERS_KV.delete(orderId)
@@ -520,12 +641,58 @@ async function handleListOrders(request, env, cors) {
 async function handleMe(request, env, cors) {
   const { user, errorResponse } = await authenticateOrRespond(request, env, cors)
   if (errorResponse) return errorResponse
-  const row = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(user.uid).first()
+  const row = await getUser(env, user.uid)
   return jsonResponse(
-    { success: true, email: user.email, name: user.name, isAdmin: Boolean(row?.is_admin) },
+    {
+      success: true,
+      email: user.email,
+      name: user.name,
+      isAdmin: Boolean(row?.is_admin),
+      aceptaMarketing: Boolean(row?.acepta_marketing),
+    },
     200,
     cors
   )
+}
+
+async function handleUpdatePreferences(request, env, cors) {
+  const { user, errorResponse } = await authenticateOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
+  }
+  if (typeof body?.aceptaMarketing !== 'boolean') {
+    return jsonResponse({ success: false, message: 'Preferencia inválida.' }, 400, cors)
+  }
+  await setMarketingConsent(env, user.uid, body.aceptaMarketing)
+  logEvent('marketing_consent_updated', { userId: user.uid, acepta: body.aceptaMarketing })
+  return jsonResponse({ success: true, aceptaMarketing: body.aceptaMarketing }, 200, cors)
+}
+
+// Enlace de baja de los correos de marketing (sin iniciar sesión): el token
+// es un HMAC del id de usuario, así nadie puede dar de baja a otra persona.
+async function handleUnsubscribe(request, env) {
+  const url = new URL(request.url)
+  const uid = url.searchParams.get('u') || ''
+  const token = url.searchParams.get('t') || ''
+  const ok = uid && token && (await verifyUnsubscribeToken(env, uid, token))
+  if (ok) {
+    await setMarketingConsent(env, uid, false)
+    logEvent('marketing_unsubscribed', { userId: uid })
+  }
+  return new Response(buildUnsubscribePageHtml({ ok: Boolean(ok), siteUrl: env.PUBLIC_SITE_URL }), {
+    status: ok ? 200 : 400,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer',
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src https:; frame-ancestors 'none'",
+    },
+  })
 }
 
 async function handleGetProducts(request, env, cors) {
@@ -692,7 +859,14 @@ async function handleAdminUpload(request, env, cors) {
     return jsonResponse({ success: false, message: 'Falta el archivo.' }, 400, cors)
   }
 
-  const key = `${crypto.randomUUID()}-${file.name}`
+  // Solo imágenes reales y de tamaño razonable: el bucket se sirve público
+  // desde este dominio, así que no se permite subir HTML, SVG ni otros tipos.
+  const ext = UPLOAD_TYPES[file.type]
+  if (!ext || file.size > UPLOAD_MAX_BYTES) {
+    return jsonResponse({ success: false, message: 'Sube una imagen JPG, PNG, WebP, AVIF o GIF de máximo 10 MB.' }, 400, cors)
+  }
+  const base = safeFileName(String(file.name || '').replace(/\.[^.]+$/, ''), 'imagen')
+  const key = `${crypto.randomUUID()}-${base}.${ext}`
   await env.IMAGES_BUCKET.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } })
   const url = `${new URL(request.url).origin}/images/${key}`
   return jsonResponse({ success: true, url }, 200, cors)
@@ -724,7 +898,81 @@ async function handleAdminUpdateOrder(request, env, cors, orderId) {
 
   await updateOrderTracking(env, orderId, orderUpdate)
   logEvent('admin_order_updated', { orderId })
-  return jsonResponse({ success: true }, 200, cors)
+
+  // En cuanto el pedido pagado tiene número de guía, se avisa al cliente
+  // (una sola vez).
+  let envioNotificado = false
+  const row = await getOrder(env, orderId)
+  if (row && row.status === 'pagado' && row.tracking_number && row.correo_cliente) {
+    if (await claimOrderEmail(env, orderId, 'email_envio_enviado')) {
+      try {
+        await sendShippedEmail(env, row)
+        envioNotificado = true
+        logEvent('shipped_email_sent', { orderId })
+      } catch (err) {
+        await releaseOrderEmail(env, orderId, 'email_envio_enviado')
+        logError('shipped_email_failed', err, { orderId })
+      }
+    }
+  }
+  return jsonResponse({ success: true, envioNotificado }, 200, cors)
+}
+
+// Manda al admin una muestra de cada correo para verificar que llegan.
+async function handleAdminTestEmail(request, env, cors) {
+  const { user, errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  if (!user.email) return jsonResponse({ success: false, message: 'Tu cuenta no tiene correo.' }, 400, cors)
+
+  const sample = {
+    id: crypto.randomUUID(),
+    asunto: 'Aro Gildi Mopan',
+    resumen: 'Aro Gildi Mopan (GCP2400174) - Gildi - Color: C7 - Verde - Medida: 50 mm / 18 mm / 140 mm x1 — $34.99',
+    total: 34.99,
+    nombreCliente: user.name || 'Cliente de prueba',
+    telefono: '7000-0000',
+    correoCliente: user.email,
+    departamento: 'San Vicente',
+    municipio: 'San Vicente',
+    direccion: 'Dirección de prueba',
+    referencia: 'Correo de prueba',
+    tieneReceta: false,
+  }
+  const results = {}
+  const tryEmail = async (key, fn) => {
+    try {
+      await fn()
+      results[key] = 'enviado'
+    } catch (err) {
+      results[key] = `error: ${err.message}`.slice(0, 300)
+    }
+  }
+  await tryEmail('bienvenida', () =>
+    sendResendMessage(env, {
+      from: env.FROM_EMAIL,
+      to: user.email,
+      subject: '[Prueba] Bienvenido a Óptica Más Visión',
+      html: buildWelcomeEmailHtml({ nombre: user.name, siteUrl: env.PUBLIC_SITE_URL, aceptaMarketing: false }),
+    })
+  )
+  await tryEmail('pedido', () => sendCustomerEmail(env, sample))
+  await tryEmail('envio', () =>
+    sendShippedEmail(env, {
+      id: sample.id,
+      asunto: sample.asunto,
+      nombre_cliente: sample.nombreCliente,
+      correo_cliente: user.email,
+      courier_name: 'Empresa de prueba',
+      tracking_number: 'PRUEBA-123',
+      tracking_url: env.PUBLIC_SITE_URL,
+      departamento: sample.departamento,
+      municipio: sample.municipio,
+      direccion: sample.direccion,
+      referencia: sample.referencia,
+    })
+  )
+  logEvent('admin_test_email', { results })
+  return jsonResponse({ success: true, to: user.email, results }, 200, cors)
 }
 
 async function handleAdminListCustomers(request, env, cors) {
@@ -880,6 +1128,21 @@ function rateLimitBucketFor(method, pathname) {
 export default {
   async fetch(request, env) {
     try {
+      return await route(request, env)
+    } catch (err) {
+      // Cualquier error no controlado responde JSON (con CORS) en vez de la
+      // página de error de Cloudflare, que el navegador ve como fallo de CORS.
+      logError('unhandled_error', err, { path: new URL(request.url).pathname })
+      const origin = request.headers.get('Origin') ?? ''
+      const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim())
+      return jsonResponse({ success: false, message: 'Ocurrió un error inesperado.' }, 500, corsHeaders(origin, allowed))
+    }
+  },
+}
+
+async function route(request, env) {
+  {
+    try {
       assertEnvIsConfigured(env)
     } catch (err) {
       logError('startup_config_error', err, {})
@@ -902,6 +1165,10 @@ export default {
     // y gastaba una escritura de KV por cada imagen.
     if ((method === 'GET' || method === 'HEAD') && pathname.startsWith('/images/')) {
       return handleGetImage(env, pathname)
+    }
+
+    if (method === 'GET' && pathname === '/api/baja') {
+      return handleUnsubscribe(request, env)
     }
 
     const bucket = rateLimitBucketFor(method, pathname)
@@ -943,6 +1210,14 @@ export default {
 
     if (method === 'GET' && pathname === '/api/me') {
       return handleMe(request, env, cors)
+    }
+
+    if (method === 'PUT' && pathname === '/api/me/preferencias') {
+      return handleUpdatePreferences(request, env, cors)
+    }
+
+    if (method === 'POST' && pathname === '/admin/test-email') {
+      return handleAdminTestEmail(request, env, cors)
     }
 
     if (method === 'GET' && pathname === '/api/products') {
@@ -1031,5 +1306,5 @@ export default {
     }
 
     return jsonResponse({ success: false, message: 'Ruta no encontrada.' }, 404, cors)
-  },
+  }
 }

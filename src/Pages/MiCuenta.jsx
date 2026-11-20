@@ -1,9 +1,11 @@
+import { usePageMeta } from '../lib/seo'
 import { useEffect, useState } from 'react'
-import { Package, MapPin, Trash2, Plus, Truck } from 'lucide-react'
+import { Package, MapPin, Trash2, Plus, Truck, Mail } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import LoginGate from '../Components/LoginGate'
 import { DEPARTAMENTOS_SV } from '../hooks/useCheckoutForm'
-import { fetchOrders, fetchAddresses, saveAddress, deleteAddress } from '../lib/orderService'
+import { fetchOrders, fetchAddresses, saveAddress, deleteAddress, updatePreferences } from '../lib/orderService'
+import { fetchMe } from '../lib/adminService'
 
 const STATUS_STYLES = {
   pendiente: 'bg-amber-100 text-amber-700',
@@ -227,8 +229,60 @@ function AddressesSection({ getIdToken }) {
   )
 }
 
+function PreferencesSection({ getIdToken }) {
+  const [acepta, setAcepta] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  useEffect(() => {
+    fetchMe(getIdToken)
+      .then((me) => setAcepta(Boolean(me.aceptaMarketing)))
+      .catch(() => setAcepta(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const toggle = async () => {
+    const next = !acepta
+    setSaving(true)
+    setMsg(null)
+    try {
+      await updatePreferences({ aceptaMarketing: next }, getIdToken)
+      setAcepta(next)
+      setMsg(next ? 'Listo, te avisaremos de ofertas y novedades.' : 'Listo, ya no recibirás correos de ofertas.')
+    } catch (err) {
+      setMsg(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start justify-between gap-4">
+      <div>
+        <p className="font-semibold text-gray-900">Ofertas y nuevas colecciones</p>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Recibe por correo descuentos y lanzamientos. Los avisos de tus pedidos te llegan siempre.
+        </p>
+        {msg && <p className="text-xs text-cyan-700 mt-2">{msg}</p>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={Boolean(acepta)}
+        aria-label="Recibir ofertas por correo"
+        disabled={acepta === null || saving}
+        onClick={toggle}
+        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${acepta ? 'bg-cyan-600' : 'bg-gray-300'}`}
+      >
+        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${acepta ? 'translate-x-5' : ''}`} />
+      </button>
+    </div>
+  )
+}
+
 export default function MiCuenta() {
   const { user, getIdToken } = useAuth()
+  usePageMeta({ title: 'Mi cuenta', path: '/mi-cuenta', noindex: true })
 
   if (!user) {
     return (
@@ -260,6 +314,13 @@ export default function MiCuenta() {
             <MapPin size={22} className="text-cyan-600" /> Mis direcciones
           </h2>
           <AddressesSection getIdToken={getIdToken} />
+        </div>
+
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-bold text-gray-800 mb-4">
+            <Mail size={22} className="text-cyan-600" /> Correos
+          </h2>
+          <PreferencesSection getIdToken={getIdToken} />
         </div>
       </div>
     </section>

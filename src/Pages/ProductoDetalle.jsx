@@ -1,3 +1,4 @@
+import { usePageMeta, SITE_URL } from '../lib/seo'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar, Info, ShoppingCart, Zap } from 'lucide-react'
@@ -327,6 +328,41 @@ export default function ProductoDetalle() {
   const { user, getIdToken } = useAuth()
   const { addLine } = useCart()
 
+  const brandName = (product?.brand || '').replace(/[.]$/, '')
+  usePageMeta({
+    title: product ? product.name : notFound ? 'Producto no encontrado' : undefined,
+    description: product
+      ? `${product.name} de ${brandName} a $${Number(product.price).toFixed(2)}. ${product.description || ''} Envíos a todo El Salvador.`.slice(0, 300)
+      : undefined,
+    path: `/producto/${codigo}`,
+    image: product?.images?.[0],
+    type: product ? 'product' : 'website',
+    noindex: notFound,
+    jsonLd: product
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: product.name,
+          sku: product.codigo,
+          description: product.description || product.name,
+          image: product.images || [],
+          brand: { '@type': 'Brand', name: brandName },
+          material: product.material || undefined,
+          color: (product.colores_disponibles || []).map((c) => (typeof c === 'string' ? c : c.nombre)).join(', ') || undefined,
+          category: product.categoria === 'sol' ? 'Lentes de sol' : 'Aros oftálmicos',
+          offers: {
+            '@type': 'Offer',
+            url: `${SITE_URL}/producto/${encodeURIComponent(product.codigo)}`,
+            priceCurrency: 'USD',
+            price: Number(product.price).toFixed(2),
+            availability: 'https://schema.org/InStock',
+            itemCondition: 'https://schema.org/NewCondition',
+            seller: { '@type': 'Organization', name: 'Óptica Más Visión' },
+          },
+        }
+      : null,
+  })
+
   // Carga el producto por código y reinicia el estado del selector cada vez
   // que cambia (por ejemplo, al navegar de un producto a otro).
   useEffect(() => {
@@ -447,6 +483,7 @@ export default function ProductoDetalle() {
       address: checkout.usingNewAddress ? checkout.newAddress : null,
       guardarDireccion: checkout.guardarDireccion,
       recetaFile: checkout.recetaFile,
+      aceptaMarketing: checkout.aceptaMarketing,
     }
 
     setIsSubmitting(true)
