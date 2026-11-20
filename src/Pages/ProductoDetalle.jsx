@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar, Info } from 'lucide-react'
+import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar, Info, ShoppingCart, Zap } from 'lucide-react'
 import CheckoutForm from '../Components/CheckoutForm'
 import LoginGate from '../Components/LoginGate'
 import OrderConfirmation from '../Components/OrderConfirmation'
 import { useCheckoutForm } from '../hooks/useCheckoutForm'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
+import { buildCartLine } from '../lib/productUtils'
 import { createPaymentLink, fetchLensOptions, fetchProduct } from '../lib/orderService'
 
 function groupLensOptionsByCategoria(lensOptions) {
@@ -55,6 +57,7 @@ function ProductDetails({
   onSelectImage,
   colorError,
   onContinue,
+  onAddToCart,
   lensGroups,
   selectedLensOptions,
   onSelectLensOption,
@@ -275,13 +278,22 @@ function ProductDetails({
       </div>
 
       <div className="pt-4 border-t border-gray-100 space-y-2">
-        <button
-          type="button"
-          onClick={onContinue}
-          className="w-full bg-gray-900 hover:bg-cyan-700 text-white px-6 py-4 rounded-full font-semibold shadow-lg shadow-gray-900/10 transition-all"
-        >
-          Continuar con el pedido
-        </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onAddToCart}
+            className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 hover:bg-cyan-700 text-white px-6 py-4 rounded-full font-semibold shadow-lg shadow-gray-900/10 transition-all"
+          >
+            <ShoppingCart size={18} /> Agregar al carrito
+          </button>
+          <button
+            type="button"
+            onClick={onContinue}
+            className="w-full inline-flex items-center justify-center gap-2 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white px-6 py-4 rounded-full font-semibold transition-all"
+          >
+            <Zap size={18} /> Comprar ahora
+          </button>
+        </div>
         <a
           href={citaUrl}
           target="_blank"
@@ -313,6 +325,7 @@ export default function ProductoDetalle() {
   const [selectedLensOptions, setSelectedLensOptions] = useState({})
   const checkout = useCheckoutForm()
   const { user, getIdToken } = useAuth()
+  const { addLine } = useCart()
 
   // Carga el producto por código y reinicia el estado del selector cada vez
   // que cambia (por ejemplo, al navegar de un producto a otro).
@@ -394,16 +407,28 @@ export default function ProductoDetalle() {
     setSelectedLensOptions((prev) => ({ ...prev, [categoria]: optionId }))
   }
 
-  const goToCheckout = () => {
+  const validateSelection = () => {
     if (product.colores_disponibles?.length && !selectedColor) {
       checkout.setErrors((prev) => ({ ...prev, color: 'Selecciona un color para continuar.' }))
-      return
+      return false
     }
     if (product.medidas_disponibles?.length && selectedMedidaIndex === null) {
       checkout.setErrors((prev) => ({ ...prev, medida: 'Selecciona una medida para continuar.' }))
-      return
+      return false
     }
-    setStep('checkout')
+    return true
+  }
+
+  const goToCheckout = () => {
+    if (validateSelection()) setStep('checkout')
+  }
+
+  const handleAddToCart = () => {
+    if (!validateSelection()) return
+    const colorObj = product.colores_disponibles?.find((c) => getColorNombre(c) === selectedColor) ?? null
+    const medidaObj = selectedMedidaIndex !== null ? product.medidas_disponibles[selectedMedidaIndex] : null
+    const lensOptions = selectedLensOptionIds.map((id) => allLensOptions.find((o) => o.id === id)).filter(Boolean)
+    addLine(buildCartLine(product, { color: colorObj, medida: medidaObj, lensOptions }))
   }
 
   const handleSubmit = async (e) => {
@@ -482,6 +507,7 @@ export default function ProductoDetalle() {
               onSelectImage={setSelectedImage}
               colorError={checkout.errors.color}
               onContinue={goToCheckout}
+              onAddToCart={handleAddToCart}
               lensGroups={lensGroups}
               selectedLensOptions={selectedLensOptions}
               onSelectLensOption={handleSelectLensOption}

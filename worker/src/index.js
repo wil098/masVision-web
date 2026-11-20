@@ -896,6 +896,14 @@ export default {
       return new Response(null, { headers: cors })
     }
 
+    // Las fotos de productos son públicas y el navegador/CDN las cachea un
+    // año, así que no pasan por el rate limit: un catálogo carga ~30 de un
+    // golpe, y contarlas agotaba el límite (fotos rotas por ERR_BLOCKED_BY_ORB)
+    // y gastaba una escritura de KV por cada imagen.
+    if ((method === 'GET' || method === 'HEAD') && pathname.startsWith('/images/')) {
+      return handleGetImage(env, pathname)
+    }
+
     const bucket = rateLimitBucketFor(method, pathname)
     const ip = getClientIp(request)
     const rateLimit = await checkRateLimit(env, bucket, ip)
@@ -951,10 +959,6 @@ export default {
 
     if (method === 'GET' && pathname === '/api/promo-blocks') {
       return handleGetPromoBlocks(request, env, cors)
-    }
-
-    if (method === 'GET' && pathname.startsWith('/images/')) {
-      return handleGetImage(env, pathname)
     }
 
     if (method === 'GET' && pathname === '/admin/products') {

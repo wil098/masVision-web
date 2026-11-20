@@ -434,6 +434,7 @@ function ProductForm({ initial, onCancel, onSaved, getIdToken }) {
             <option value="Ovalado" />
             <option value="Rectangular" />
             <option value="Cat-eye" />
+            <option value="Hexagonal" />
             <option value="Wayfarer" />
           </datalist>
         </div>

@@ -3,13 +3,11 @@ import { Link, useLocation } from "react-router-dom"
 import { Glasses, Home, MapPin, Menu, Sun, X, Phone, ShoppingCart, User, LogOut, Settings } from "lucide-react"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
-import CartSidebar from "./CartSidebar.jsx"
 
 const Navbar = () => {
   const [open, setOpen] = useState(false)
-  const [isCartOpen, setIsCartOpen] = useState(false) // Estado para abrir/cerrar la barra lateral
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
-  const { cartCount } = useCart()
+  const { cartCount, openCart } = useCart()
   const { user, isAdmin, signInWithGoogle, signOut } = useAuth()
   const location = useLocation()
 
@@ -90,13 +88,13 @@ const Navbar = () => {
 
               {/* Botón de Carrito (Escritorio) */}
               <button
-                onClick={() => setIsCartOpen(true)}
+                onClick={openCart}
                 className={`relative p-2.5 rounded-full transition-all ${
                   transparent
                     ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:bg-white/10"
                     : "text-gray-700 hover:text-cyan-600 hover:bg-gray-50"
                 }`}
-                aria-label="Abrir carrito"
+                aria-label={`Abrir carrito (${cartCount})`}
               >
                 <ShoppingCart size={24} />
                 {cartCount > 0 && (
@@ -185,15 +183,15 @@ const Navbar = () => {
             <div className="flex items-center gap-2 md:hidden">
               {/* Botón de Carrito (Móvil) */}
               <button
-                onClick={() => setIsCartOpen(true)}
+                onClick={openCart}
                 className={`relative p-2.5 transition-colors ${
                   transparent ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]" : "text-gray-700"
                 }`}
-                aria-label="Abrir carrito móvil"
+                aria-label={`Abrir carrito (${cartCount})`}
               >
                 <ShoppingCart size={24} />
                 {cartCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
+                  <span className="absolute top-0 right-0 bg-cyan-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm ring-2 ring-white">
                     {cartCount}
                   </span>
                 )}
@@ -289,8 +287,6 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* Barra Lateral del Carrito */}
-      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   )
 }

@@ -20,6 +20,19 @@ const normalize = (s) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 
+// Agrupa los materiales tal como están cargados ("Stainless Steel Temple",
+// "Titanium - Stainless steel", "Acetato - Stainless steel"…) en familias
+// fáciles de filtrar. El dato completo se sigue mostrando en la ficha.
+function materialFamily(material) {
+  const m = normalize(material)
+  if (!m) return null
+  if (m.includes('tn75')) return 'TN75+'
+  if (m.includes('titan')) return 'Titanio'
+  if (m.includes('acetat')) return 'Acetato'
+  if (m.includes('metal') || m.includes('steel') || m.includes('acero')) return 'Metal'
+  return material.trim()
+}
+
 // Cada bloque de colección abre un grupo nuevo, para que la colección
 // empiece siempre en una fila propia de la grilla.
 function groupByColeccion(items) {
@@ -57,14 +70,14 @@ export default function CatalogPage({ categoria, promoPage, eyebrow, title, subt
   }, [categoria, promoPage])
 
   const materiales = useMemo(() => {
-    const set = new Set(productos.map((p) => p.material).filter(Boolean))
+    const set = new Set(productos.map((p) => materialFamily(p.material)).filter(Boolean))
     return [...set].sort()
   }, [productos])
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
     let list = productos.filter((p) => {
-      if (material !== 'todos' && p.material !== material) return false
+      if (material !== 'todos' && materialFamily(p.material) !== material) return false
       if (!q) return true
       return [p.name, p.brand, p.codigo, p.material].some((v) => normalize(v).includes(q))
     })

@@ -6,7 +6,6 @@ import {
   Phone,
   Navigation,
   MessageCircle,
-  Car,
   CreditCard,
   Microscope,
   ChevronDown,
@@ -64,12 +63,6 @@ const HORARIO = [
 ]
 
 const FACILIDADES = [
-  {
-    icon: Car,
-    titulo: 'Parqueo seguro',
-    texto:
-      'Todas nuestras sucursales cuentan con estacionamiento vigilado o zonas seguras de aparcamiento totalmente gratis para nuestros clientes.',
-  },
   {
     icon: CreditCard,
     titulo: 'Métodos de pago',
@@ -386,7 +379,7 @@ export default function Sucursales() {
               No importa cuál sucursal elijas, en todas garantizamos el mismo estándar de excelencia, comodidad y tecnología.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
             {FACILIDADES.map(({ icon: Icon, titulo, texto }) => (
               <div key={titulo} className="bg-white rounded-3xl border border-gray-100 p-6 sm:p-8 group hover:shadow-xl hover:shadow-gray-200/60 transition-shadow">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-700 flex items-center justify-center mb-5 transition-colors group-hover:bg-cyan-600 group-hover:text-white">

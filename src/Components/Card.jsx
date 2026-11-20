@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, ShoppingCart, Check } from 'lucide-react'
+import { MessageCircle, ShoppingCart } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 
 // Productos antiguos guardan cada color como texto plano (ej. "C1"); los
@@ -27,29 +27,18 @@ export function CardSkeleton() {
 }
 
 export default function Card({ product }) {
-  const { addToCart } = useCart()
+  const { requestAdd } = useCart()
 
   const { name, price, brand, images, codigo, colores_disponibles, categoria, nueva_coleccion } = product || {}
   const [activeImage, setActiveImage] = useState(images?.[0])
   const [activeSwatch, setActiveSwatch] = useState(null)
-  const [added, setAdded] = useState(false)
 
   useEffect(() => {
     setActiveImage(images?.[0])
     setActiveSwatch(null)
   }, [images])
 
-  useEffect(() => {
-    if (!added) return
-    const t = setTimeout(() => setAdded(false), 1500)
-    return () => clearTimeout(t)
-  }, [added])
-
   if (!product) return null
-
-  // El código de producto es la llave real en D1; el Worker la usa para
-  // recalcular el precio del pedido, así que el carrito debe llevarla.
-  const id = codigo
 
   const whatsappNumber = '50371497972'
   const whatsappMessage = `Hola! Me interesa el modelo *${name}* de ${brand}. Precio: $${price}`
@@ -121,16 +110,12 @@ export default function Card({ product }) {
 
         <div className="flex gap-2 mt-auto pt-4">
           <button
-            onClick={() => {
-              addToCart({ id, codigo, name, price, brand, image: images?.[0] })
-              setAdded(true)
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 text-white px-3 py-2.5 sm:py-3 rounded-full font-semibold text-xs sm:text-sm transition-colors ${
-              added ? 'bg-emerald-600' : 'bg-gray-900 hover:bg-cyan-700'
-            }`}
+            onClick={() => requestAdd(product)}
+            aria-label={`Agregar ${name} al carrito`}
+            className="flex-1 flex items-center justify-center gap-2 text-white px-3 py-2.5 sm:py-3 rounded-full font-semibold text-xs sm:text-sm transition-colors bg-gray-900 hover:bg-cyan-700"
           >
-            {added ? <Check size={16} /> : <ShoppingCart size={16} />}
-            <span className="hidden min-[400px]:inline">{added ? 'Agregado' : 'Agregar'}</span>
+            <ShoppingCart size={16} />
+            <span className="hidden min-[400px]:inline">Agregar</span>
           </button>
 
           <a

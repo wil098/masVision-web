@@ -7,4 +7,15 @@ export default defineConfig({
   // Solo el deploy a GitHub Pages (npm run deploy) necesita el subpath,
   // por eso ese script pasa GH_PAGES=1 antes de compilar.
   base: process.env.GH_PAGES ? '/masVision-web/' : '/',
+  build: {
+    rollupOptions: {
+      output: {
+        // React y el router cambian poco: en su propio archivo el navegador
+        // los mantiene en caché entre publicaciones del sitio.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-dom/client', 'react-router-dom'],
+        },
+      },
+    },
+  },
 })
