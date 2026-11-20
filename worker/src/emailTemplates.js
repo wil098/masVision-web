@@ -72,7 +72,7 @@ function emailLayout({ preheader = '', heading, subheading, bodyHtml, siteUrl, f
     </div>
     <div style="text-align:center;padding:24px 16px 0 16px;color:#9ca3af;font-size:12px;line-height:1.6;">
       <p style="margin:0 0 6px 0;"><strong style="color:#6b7280;">${BRAND}</strong> · San Vicente · Zacatecoluca · Cojutepeque</p>
-      <p style="margin:0 0 6px 0;">¿Dudas? Responde este correo o escríbenos por <a href="${WHATSAPP_URL}" style="color:${BRAND_COLOR};">WhatsApp</a>.</p>
+      <p style="margin:0 0 6px 0;">¿Dudas? Escríbenos por <a href="${WHATSAPP_URL}" style="color:${BRAND_COLOR};">WhatsApp</a>.</p>
       ${footerExtraHtml}
     </div>
   </div>
@@ -146,7 +146,7 @@ export function buildCustomerEmailHtml(order, { siteUrl } = {}) {
         : ''
     }
     <p style="margin:0 0 8px 0;color:#111827;font-size:15px;font-weight:700;">¿Qué sigue?</p>
-    <p style="margin:0 0 24px 0;color:#374151;font-size:14px;line-height:1.6;">Preparamos tu pedido y te avisaremos por correo cuando salga, con el número de guía para que lo sigas. Si algo de la dirección está incorrecto, respóndenos a este correo.</p>
+    <p style="margin:0 0 24px 0;color:#374151;font-size:14px;line-height:1.6;">Preparamos tu pedido y te avisaremos por correo cuando salga, con el número de guía para que lo sigas. Si algo de la dirección está incorrecto, escríbenos por WhatsApp.</p>
     ${site ? `<div style="text-align:center;">${button('Ver mis pedidos', `${site.replace(/\/$/, '')}/mi-cuenta`)}</div>` : ''}
   `
   return emailLayout({

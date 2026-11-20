@@ -106,7 +106,6 @@ async function maybeSendWelcomeEmail(env, user) {
     await sendResendMessage(env, {
       from: env.FROM_EMAIL,
       to: user.email,
-      reply_to: env.DESTINATION_EMAIL,
       subject: 'Bienvenido a Óptica Más Visión',
       html: buildWelcomeEmailHtml({
         nombre: user.name,
@@ -256,7 +255,6 @@ async function sendCustomerEmail(env, order) {
   await sendResendMessage(env, {
     from: env.FROM_EMAIL,
     to: order.correoCliente,
-    reply_to: env.DESTINATION_EMAIL,
     subject: `Pedido confirmado #${String(order.id).slice(0, 8).toUpperCase()} · Óptica Más Visión`,
     html: buildCustomerEmailHtml(order, { siteUrl: env.PUBLIC_SITE_URL }),
   })
@@ -266,7 +264,6 @@ async function sendShippedEmail(env, orderRow) {
   await sendResendMessage(env, {
     from: env.FROM_EMAIL,
     to: orderRow.correo_cliente,
-    reply_to: env.DESTINATION_EMAIL,
     subject: `Tu pedido va en camino · Óptica Más Visión`,
     html: buildShippedEmailHtml(orderRow, { siteUrl: env.PUBLIC_SITE_URL }),
   })
