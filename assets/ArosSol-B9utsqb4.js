@@ -1,0 +1,1 @@
+import{j as o}from"./index-mmckjj7g.js";import{C as a}from"./CatalogPage-C-2dK7p4.js";import"./react-t3kb7BRX.js";function i(){return o.jsx(a,{categoria:"sol",promoPage:"aros-sol",eyebrow:"Catálogo",title:"Lentes de Sol",subtitle:"Protección UV con estilo. Modelos polarizados y de temporada para cada ocasión.",image:"wide foto.png",imagePosition:"70% 30%"})}export{i as default};
