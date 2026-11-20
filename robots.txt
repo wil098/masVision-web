@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /masVision-web/admin
+Disallow: /masVision-web/mi-cuenta
+
+Sitemap: https://wil098.github.io/masVision-web/sitemap.xml
