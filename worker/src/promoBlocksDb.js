@@ -26,10 +26,10 @@ export async function getPromoBlock(env, id) {
 export async function createPromoBlock(env, block) {
   const now = new Date().toISOString()
   const result = await env.DB.prepare(
-    `INSERT INTO promo_blocks (pagina, title, subtitle, image, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO promo_blocks (pagina, title, subtitle, image, position, coleccion, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(block.pagina, block.title, block.subtitle || '', block.image, block.position, now, now)
+    .bind(block.pagina, block.title, block.subtitle || '', block.image, block.position, block.coleccion || null, now, now)
     .run()
   return result.meta.last_row_id
 }
@@ -37,10 +37,10 @@ export async function createPromoBlock(env, block) {
 export async function updatePromoBlock(env, id, block) {
   const now = new Date().toISOString()
   const result = await env.DB.prepare(
-    `UPDATE promo_blocks SET pagina = ?, title = ?, subtitle = ?, image = ?, position = ?, updated_at = ?
+    `UPDATE promo_blocks SET pagina = ?, title = ?, subtitle = ?, image = ?, position = ?, coleccion = ?, updated_at = ?
      WHERE id = ?`
   )
-    .bind(block.pagina, block.title, block.subtitle || '', block.image, block.position, now, id)
+    .bind(block.pagina, block.title, block.subtitle || '', block.image, block.position, block.coleccion || null, now, id)
     .run()
   return result.meta.changes > 0
 }

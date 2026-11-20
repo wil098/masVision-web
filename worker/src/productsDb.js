@@ -48,8 +48,8 @@ export async function createProduct(env, product) {
   await env.DB.prepare(
     `INSERT INTO products (
       codigo, categoria, name, description, price, brand, material, forma,
-      caracteristicas, colores_disponibles, medidas_disponibles, images, disponible, destacado, nueva_coleccion, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      caracteristicas, colores_disponibles, medidas_disponibles, images, disponible, destacado, nueva_coleccion, coleccion, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       product.codigo,
@@ -67,6 +67,7 @@ export async function createProduct(env, product) {
       product.disponible === false ? 0 : 1,
       product.destacado ? 1 : 0,
       product.nueva_coleccion ? 1 : 0,
+      product.coleccion || null,
       now,
       now
     )
@@ -79,7 +80,7 @@ export async function updateProduct(env, codigo, product) {
     `UPDATE products SET
       categoria = ?, name = ?, description = ?, price = ?, brand = ?, material = ?, forma = ?,
       caracteristicas = ?, colores_disponibles = ?, medidas_disponibles = ?,
-      images = ?, disponible = ?, destacado = ?, nueva_coleccion = ?, updated_at = ?
+      images = ?, disponible = ?, destacado = ?, nueva_coleccion = ?, coleccion = ?, updated_at = ?
      WHERE codigo = ?`
   )
     .bind(
@@ -97,6 +98,7 @@ export async function updateProduct(env, codigo, product) {
       product.disponible === false ? 0 : 1,
       product.destacado ? 1 : 0,
       product.nueva_coleccion ? 1 : 0,
+      product.coleccion || null,
       now,
       codigo
     )

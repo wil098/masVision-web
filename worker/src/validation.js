@@ -51,6 +51,7 @@ export const adminProductSchema = z.object({
   description: longText,
   material: optionalText(200),
   forma: optionalText(200),
+  coleccion: optionalText(200),
   caracteristicas: optionalText(2000),
   colores_disponibles: z.array(colorSchema).max(50).optional().default([]),
   medidas_disponibles: z.array(medidaSchema).max(50).optional().default([]),
@@ -76,6 +77,7 @@ export const adminPromoBlockSchema = z.object({
   subtitle: optionalText(300),
   image: z.string().trim().min(1).max(2000),
   position: z.coerce.number().int().positive(),
+  coleccion: optionalText(200),
 })
 
 export const adminRenameProductCodeSchema = z.object({

@@ -20,6 +20,18 @@ const normalize = (s) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 
+// Cada bloque de colección abre un grupo nuevo, para que la colección
+// empiece siempre en una fila propia de la grilla.
+function groupByColeccion(items) {
+  const groups = []
+  for (const item of items) {
+    const abreGrupo = item.type === 'promo' && item.data.coleccion
+    if (abreGrupo || groups.length === 0) groups.push([])
+    groups[groups.length - 1].push(item)
+  }
+  return groups
+}
+
 export default function CatalogPage({ categoria, promoPage, eyebrow, title, subtitle, image, imagePosition = 'center' }) {
   const [productos, setProductos] = useState([])
   const [promoBlocks, setPromoBlocks] = useState([])
@@ -169,14 +181,18 @@ export default function CatalogPage({ categoria, promoPage, eyebrow, title, subt
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-            {items.map((item) =>
-              item.type === 'promo' ? (
-                <PromoBlockCard key={item.key} block={item.data} />
-              ) : (
-                <Card key={item.key} product={item.data} />
-              )
-            )}
+          <div className="space-y-3 sm:space-y-6">
+            {groupByColeccion(items).map((group) => (
+              <div key={group[0].key} className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                {group.map((item) =>
+                  item.type === 'promo' ? (
+                    <PromoBlockCard key={item.key} block={item.data} />
+                  ) : (
+                    <Card key={item.key} product={item.data} />
+                  )
+                )}
+              </div>
+            ))}
           </div>
         )}
       </section>

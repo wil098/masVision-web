@@ -50,6 +50,7 @@ const EMPTY_PRODUCT = {
   brand: '',
   material: '',
   forma: '',
+  coleccion: '',
   caracteristicas: '',
   colores_disponibles: [],
   medidas_disponibles: [],
@@ -439,6 +440,20 @@ function ProductForm({ initial, onCancel, onSaved, getIdToken }) {
       </div>
 
       <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Colección (opcional)</label>
+        <input
+          name="coleccion"
+          value={form.coleccion || ''}
+          onChange={handleChange}
+          placeholder="Ej. Metal Collection"
+          list="colecciones"
+          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+        />
+        <ColeccionesDatalist />
+        <p className="text-[11px] text-gray-400 mt-1">Agrupa este aro bajo el bloque promocional de la misma colección.</p>
+      </div>
+
+      <div>
         <label className="block text-xs font-semibold text-gray-600 mb-1">Características (ej. UV 400 - Polarizado)</label>
         <input name="caracteristicas" value={form.caracteristicas || ''} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
       </div>
@@ -793,7 +808,20 @@ function CustomersTab({ getIdToken }) {
 
 /* ---------- Lentes (filtro, marca, etc.) ---------- */
 const EMPTY_LENS_OPTION = { categoria: '', nombre: '', precio_adicional: '', disponible: false }
-const EMPTY_PROMO_BLOCK = { pagina: 'aros-oftalmicos', title: '', subtitle: '', image: '', position: 1 }
+const EMPTY_PROMO_BLOCK = { pagina: 'aros-oftalmicos', title: '', subtitle: '', image: '', position: 1, coleccion: '' }
+
+// Sugerencias para el campo "Colección" (se puede escribir cualquier otra).
+const COLECCIONES_SUGERIDAS = ['Minerals', 'Metal Collection', 'G-Metal', 'G-Sport', 'Places']
+
+function ColeccionesDatalist() {
+  return (
+    <datalist id="colecciones">
+      {COLECCIONES_SUGERIDAS.map((c) => (
+        <option key={c} value={c} />
+      ))}
+    </datalist>
+  )
+}
 
 function LensOptionForm({ initial, onCancel, onSaved, getIdToken }) {
   const isEditing = Boolean(initial)
@@ -1071,7 +1099,9 @@ function PromoBlockForm({ initial, onCancel, onSaved, getIdToken }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Posición en la grilla</label>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">
+            {form.coleccion?.trim() ? 'Orden de la colección' : 'Posición en la grilla'}
+          </label>
           <input
             name="position"
             type="number"
@@ -1081,6 +1111,23 @@ function PromoBlockForm({ initial, onCancel, onSaved, getIdToken }) {
             className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Colección (opcional)</label>
+        <input
+          name="coleccion"
+          value={form.coleccion || ''}
+          onChange={handleChange}
+          placeholder="Ej. Metal Collection"
+          list="colecciones"
+          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+        />
+        <ColeccionesDatalist />
+        <p className="text-[11px] text-gray-400 mt-1">
+          Si la llenas, el bloque aparece encima de los aros de esa colección y el número de arriba define en qué orden van
+          las colecciones. Si la dejas vacía, el bloque se coloca en esa celda de la grilla.
+        </p>
       </div>
 
       <div>
@@ -1212,7 +1259,8 @@ function PromoBlocksTab({ getIdToken }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-800 truncate">{b.title}</p>
                 <p className="text-xs text-gray-500">
-                  {PROMO_PAGINAS.find((p) => p.value === b.pagina)?.label || b.pagina} · Posición {b.position}
+                  {PROMO_PAGINAS.find((p) => p.value === b.pagina)?.label || b.pagina} ·{' '}
+                  {b.coleccion ? `Colección ${b.coleccion} · Orden ${b.position}` : `Posición ${b.position}`}
                 </p>
               </div>
               <button onClick={() => setEditing(b)} className="p-2 text-gray-400 hover:text-cyan-600 transition-colors">
