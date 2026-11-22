@@ -278,8 +278,8 @@ export function buildQuoteReadyCustomerHtml(row, { siteUrl, urlPago } = {}) {
       <tr><td style="padding:4px 0;color:#6b7280;font-size:13px;">Lentes</td><td style="padding:4px 0;color:#6b7280;font-size:13px;text-align:right;">${escapeHtml(money(row.lentes_precio))}</td></tr>
       <tr><td style="padding:8px 0;color:#111827;font-size:15px;font-weight:700;">Total a pagar</td><td style="padding:8px 0;color:#111827;font-size:20px;font-weight:800;text-align:right;">${escapeHtml(money(row.total))}</td></tr>
     </table>
-    ${urlPago ? `<div style="text-align:center;margin:0 0 16px 0;">${button('Pagar mi pedido', urlPago)}</div>` : ''}
-    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;text-align:center;">Un solo pago con tarjeta, seguro a través de Wompi. Si tienes dudas sobre tus lentes, escríbenos por WhatsApp.</p>
+    ${urlPago ? `<div style="text-align:center;margin:0 0 16px 0;">${button('Ver mi pedido y pagar', urlPago)}</div>` : ''}
+    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;text-align:center;">Revisa tu pedido completo en nuestra web y paga todo en un solo pago con tarjeta, seguro a través de Wompi. Si tienes dudas sobre tus lentes, escríbenos por WhatsApp.</p>
   `
   return emailLayout({
     preheader: `Total ${money(row.total)} · aro + lentes + envío`,

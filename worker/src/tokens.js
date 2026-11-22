@@ -19,6 +19,25 @@ export function timingSafeEqualHex(a, b) {
   return diff === 0
 }
 
+// Firma del enlace público de un pedido (/pedido/:id?t=...): permite ver la
+// cotización y pagarla sin iniciar sesión, solo a quien recibió el enlace.
+export async function orderViewToken(env, orderId) {
+  if (!env.UNSUBSCRIBE_SECRET) return null
+  return (await hmacHex(env.UNSUBSCRIBE_SECRET, `pedido:${orderId}`)).slice(0, 32)
+}
+
+export async function verifyOrderViewToken(env, orderId, token) {
+  const expected = await orderViewToken(env, orderId)
+  return Boolean(expected) && timingSafeEqualHex(expected, String(token))
+}
+
+export async function buildOrderViewUrl(env, orderId) {
+  const token = await orderViewToken(env, orderId)
+  if (!token) return null
+  const base = env.PUBLIC_SITE_URL.endsWith('/') ? env.PUBLIC_SITE_URL : `${env.PUBLIC_SITE_URL}/`
+  return `${base}pedido/${orderId}?t=${token}`
+}
+
 export async function unsubscribeToken(env, uid) {
   if (!env.UNSUBSCRIBE_SECRET) return null
   return (await hmacHex(env.UNSUBSCRIBE_SECRET, `baja:${uid}`)).slice(0, 32)

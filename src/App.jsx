@@ -8,6 +8,7 @@ const MiCuenta = lazy(() => import('./Pages/MiCuenta'));
 const AdminPanel = lazy(() => import('./Pages/AdminPanel'));
 const ProductoDetalle = lazy(() => import('./Pages/ProductoDetalle'));
 const Sucursales = lazy(() => import('./Pages/Sucursales'));
+const PedidoPublico = lazy(() => import('./Pages/PedidoPublico'));
 import Navbar from './Components/Navbar';
 import Footer from './Components/Footer';
 import PaymentReturnNotice from './Components/PaymentReturnNotice';
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/mi-cuenta" element={<MiCuenta />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/producto/:codigo" element={<ProductoDetalle />} />
+          <Route path="/pedido/:id" element={<PedidoPublico />} />
 
           <Route path="/sucursales" element={<Sucursales />} />
         </Routes>

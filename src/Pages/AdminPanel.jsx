@@ -689,7 +689,7 @@ function whatsappQuoteUrl(order, total, urlPago) {
   const digits = String(order.telefono || '').replace(/\D/g, '')
   const phone = digits.length === 8 ? `503${digits}` : digits
   const nombre = String(order.nombre_cliente || '').split(' ')[0]
-  const msg = `Hola ${nombre}, ya revisamos tu receta. El total de tu pedido (aro + lentes + envío) es $${Number(total).toFixed(2)}. Puedes pagarlo aquí: ${urlPago}`
+  const msg = `Hola ${nombre}, ya revisamos tu receta. El total de tu pedido (aro + lentes + envío) es $${Number(total).toFixed(2)}. Puedes ver tu pedido y pagarlo aquí: ${urlPago}`
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
 }
 
@@ -700,7 +700,11 @@ function QuotePanel({ order, getIdToken, onUpdated }) {
   const [precio, setPrecio] = useState(order.lentes_precio ?? '')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
-  const [sent, setSent] = useState(order.status === 'cotizado' && order.url_pago ? { urlPago: order.url_pago, total: order.total } : null)
+  const [sent, setSent] = useState(
+    order.status === 'cotizado' && order.url_pago
+      ? { urlPago: order.url_pago, urlPedido: order.url_pedido, total: order.total }
+      : null
+  )
   const [editingQuote, setEditingQuote] = useState(order.status === 'cotizacion')
 
   const base = Number(order.total_base ?? order.total)
@@ -716,7 +720,7 @@ function QuotePanel({ order, getIdToken, onUpdated }) {
     setSending(true)
     try {
       const r = await sendAdminQuote(order.id, { descripcion: descripcion.trim(), precio: precioNum }, getIdToken)
-      setSent({ urlPago: r.urlPago, total: r.total, correoEnviado: r.correoEnviado })
+      setSent({ urlPago: r.urlPago, urlPedido: r.urlPedido, total: r.total, correoEnviado: r.correoEnviado })
       setEditingQuote(false)
       onUpdated()
     } catch (err) {
@@ -795,7 +799,7 @@ function QuotePanel({ order, getIdToken, onUpdated }) {
             </p>
             <div className="flex flex-wrap gap-2">
               <a
-                href={whatsappQuoteUrl(order, sent.total, sent.urlPago)}
+                href={whatsappQuoteUrl(order, sent.total, sent.urlPedido || sent.urlPago)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg"
@@ -804,10 +808,10 @@ function QuotePanel({ order, getIdToken, onUpdated }) {
               </a>
               <button
                 type="button"
-                onClick={() => navigator.clipboard?.writeText(sent.urlPago)}
+                onClick={() => navigator.clipboard?.writeText(sent.urlPedido || sent.urlPago)}
                 className="text-sm border border-gray-200 bg-white hover:bg-gray-50 font-semibold px-4 py-2 rounded-lg"
               >
-                Copiar enlace de pago
+                Copiar enlace del pedido
               </button>
               <button type="button" onClick={() => setEditingQuote(true)} className="text-sm text-cyan-700 font-semibold px-2 py-2">
                 Cambiar cotización

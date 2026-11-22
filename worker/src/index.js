@@ -55,7 +55,13 @@ import {
 import { logEvent, logError } from './logger.js'
 import { requireUser, requireAdmin, syncAdminFlag } from './auth.js'
 import { checkRateLimit, getClientIp, isAuthBlocked, recordAuthFailure } from './rateLimit.js'
-import { verifyUnsubscribeToken, buildUnsubscribeUrl, timingSafeEqualHex } from './tokens.js'
+import {
+  verifyUnsubscribeToken,
+  buildUnsubscribeUrl,
+  timingSafeEqualHex,
+  verifyOrderViewToken,
+  buildOrderViewUrl,
+} from './tokens.js'
 import { securityHeaders, assertEnvIsConfigured } from './security.js'
 import {
   checkoutItemsSchema,
@@ -955,6 +961,9 @@ async function handleAdminListOrders(request, env, cors) {
   const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
   if (errorResponse) return errorResponse
   const orders = await listAllOrders(env)
+  for (const o of orders) {
+    if (o.status === 'cotizado') o.url_pedido = await buildOrderViewUrl(env, o.id)
+  }
   return jsonResponse({ success: true, orders }, 200, cors)
 }
 
@@ -995,6 +1004,43 @@ async function handleAdminUpdateOrder(request, env, cors, orderId) {
     }
   }
   return jsonResponse({ success: true, envioNotificado }, 200, cors)
+}
+
+// Vista pública de un pedido con enlace firmado: lo que necesita el cliente
+// para revisar su cotización antes de pagar (sin correo ni teléfono).
+async function handleGetOrderView(request, env, cors, orderId) {
+  const token = new URL(request.url).searchParams.get('t') || ''
+  if (!/^[0-9a-f-]{36}$/.test(orderId) || !(await verifyOrderViewToken(env, orderId, token))) {
+    return jsonResponse({ success: false, message: 'Enlace no válido.' }, 404, cors)
+  }
+  const row = await getOrder(env, orderId)
+  if (!row) return jsonResponse({ success: false, message: 'Pedido no encontrado.' }, 404, cors)
+  return jsonResponse(
+    {
+      success: true,
+      pedido: {
+        id: row.id,
+        numero: row.id.slice(0, 8).toUpperCase(),
+        status: row.status,
+        created_at: row.created_at,
+        nombre: String(row.nombre_cliente || '').split(' ')[0],
+        asunto: row.asunto,
+        resumen: row.resumen,
+        lentes_descripcion: row.lentes_descripcion,
+        lentes_precio: row.lentes_precio,
+        total_base: row.total_base ?? row.total,
+        total: row.total,
+        direccion: row.direccion,
+        municipio: row.municipio,
+        departamento: row.departamento,
+        referencia: row.referencia,
+        tiene_receta: Boolean(row.tiene_receta),
+        url_pago: row.status === 'cotizado' ? row.url_pago : null,
+      },
+    },
+    200,
+    cors
+  )
 }
 
 // El admin pone el precio de los lentes: se crea UN enlace de pago por el
@@ -1045,6 +1091,9 @@ async function handleAdminSendQuote(request, env, cors, orderId) {
   await setOrderQuote(env, orderId, { descripcion: data.descripcion, precio: data.precio, total, urlPago, version })
   logEvent('quote_sent', { orderId, total, version })
 
+  // El cliente primero revisa su pedido en la web y desde ahí paga.
+  const urlPedido = await buildOrderViewUrl(env, orderId)
+
   let correoEnviado = false
   try {
     await sendResendMessage(env, {
@@ -1053,7 +1102,7 @@ async function handleAdminSendQuote(request, env, cors, orderId) {
       subject: 'Tu cotización de lentes está lista · Óptica Más Visión',
       html: buildQuoteReadyCustomerHtml(
         { ...row, lentes_descripcion: data.descripcion, lentes_precio: data.precio, total },
-        { siteUrl: env.PUBLIC_SITE_URL, urlPago }
+        { siteUrl: env.PUBLIC_SITE_URL, urlPago: urlPedido || urlPago }
       ),
     })
     correoEnviado = true
@@ -1061,7 +1110,7 @@ async function handleAdminSendQuote(request, env, cors, orderId) {
     logError('quote_ready_email_failed', err, { orderId })
   }
 
-  return jsonResponse({ success: true, urlPago, total, correoEnviado }, 200, cors)
+  return jsonResponse({ success: true, urlPago, urlPedido, total, correoEnviado }, 200, cors)
 }
 
 // Descarga de la receta para el admin (el bucket es privado).
@@ -1389,6 +1438,10 @@ async function route(request, env) {
 
     if (method === 'GET' && pathname.startsWith('/api/products/')) {
       return handleGetProduct(env, cors, decodeURIComponent(pathname.split('/').pop()))
+    }
+
+    if (method === 'GET' && pathname.startsWith('/api/pedido/')) {
+      return handleGetOrderView(request, env, cors, decodeURIComponent(pathname.split('/').pop()))
     }
 
     if (method === 'GET' && pathname === '/api/lens-options') {

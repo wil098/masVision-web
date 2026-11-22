@@ -71,6 +71,15 @@ export async function fetchLensOptions() {
 // El precio SIEMPRE se calcula del lado del servidor a partir del código de
 // cada producto — nunca se manda un total desde el navegador (así se evita
 // que alguien pague un monto distinto al real).
+// Pedido visto desde el enlace firmado del correo (no requiere sesión).
+export async function fetchOrderView(orderId, token) {
+  const apiBase = requireApiBase()
+  const response = await fetch(`${apiBase}/api/pedido/${encodeURIComponent(orderId)}?t=${encodeURIComponent(token)}`)
+  const result = await response.json()
+  if (!result.success) throw new Error(result.message || 'No encontramos este pedido.')
+  return result.pedido
+}
+
 export async function updatePreferences({ aceptaMarketing }, getIdToken) {
   const apiBase = requireApiBase()
   const response = await authFetch(
