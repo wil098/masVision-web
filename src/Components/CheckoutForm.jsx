@@ -1,4 +1,4 @@
-import { Upload, FileText, Trash2, MapPin, Plus } from 'lucide-react'
+import { Upload, FileText, Trash2, MapPin, Plus, Glasses, CheckCircle2 } from 'lucide-react'
 import { DEPARTAMENTOS_SV } from '../hooks/useCheckoutForm'
 
 export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting }) {
@@ -198,24 +198,56 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-1">
-            Receta para tus lentes <span className="font-normal text-gray-400">(opcional)</span>
-          </label>
-          <p className="text-xs text-gray-500 leading-relaxed mb-2">
-            El precio de los aros no incluye lentes. Si quieres lentes graduados, sube tu receta y te
-            enviaremos la cotización; se pagan aparte, solo si la aceptas.
-          </p>
+        <section
+          aria-labelledby="receta-titulo"
+          className="rounded-2xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-4 sm:p-5"
+        >
+          <div className="flex items-start gap-3 mb-3">
+            <span className="w-10 h-10 shrink-0 rounded-xl bg-cyan-600 text-white flex items-center justify-center">
+              <Glasses size={20} />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 id="receta-titulo" className="text-base font-bold text-gray-900">
+                  ¿Quieres lentes graduados?
+                </h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded-full">
+                  Opcional
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 mt-1 leading-relaxed">
+                <strong className="text-gray-900">El precio es solo del aro, no incluye lentes.</strong> Sube tu receta y
+                te cotizamos tus lentes.
+              </p>
+            </div>
+          </div>
+
+          <ol className="grid grid-cols-3 gap-2 mb-4 text-center">
+            {['Sube tu receta', 'Te enviamos la cotización por WhatsApp', 'Pagas los lentes solo si aceptas'].map((paso, i) => (
+              <li key={paso} className="rounded-xl bg-white border border-cyan-100 px-2 py-2.5">
+                <span className="mx-auto mb-1 w-5 h-5 rounded-full bg-cyan-600 text-white text-[11px] font-bold flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <span className="block text-[11px] leading-snug text-gray-700">{paso}</span>
+              </li>
+            ))}
+          </ol>
 
           {recetaFile ? (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3">
               <div className="flex items-center gap-2 min-w-0">
-                <FileText size={18} className="text-cyan-600 shrink-0" />
-                <span className="text-sm text-gray-700 truncate">{recetaFile.name}</span>
+                <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-emerald-800">Receta lista</p>
+                  <p className="text-xs text-emerald-700 truncate flex items-center gap-1">
+                    <FileText size={12} className="shrink-0" /> {recetaFile.name}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={removeFile}
+                aria-label="Quitar receta"
                 className="text-gray-400 hover:text-red-500 transition-colors shrink-0"
               >
                 <Trash2 size={16} />
@@ -224,11 +256,11 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
           ) : (
             <label
               htmlFor="receta"
-              className="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-200 px-4 py-6 text-center cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/40 transition-colors"
+              className="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-cyan-300 bg-white px-4 py-5 text-center cursor-pointer hover:border-cyan-500 hover:bg-cyan-50 transition-colors"
             >
-              <Upload size={20} className="text-gray-400" />
-              <span className="text-sm text-gray-600">Sube una foto o PDF de tu receta</span>
-              <span className="text-xs text-gray-400">JPG, PNG o PDF · máx. 5MB</span>
+              <Upload size={22} className="text-cyan-600" />
+              <span className="text-sm font-semibold text-gray-800">Sube una foto o PDF de tu receta</span>
+              <span className="text-xs text-gray-500">JPG, PNG o PDF · máx. 5 MB</span>
               <input
                 id="receta"
                 name="receta"
@@ -240,7 +272,19 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
             </label>
           )}
           {errors.receta && <p className="text-red-500 text-xs mt-1">{errors.receta}</p>}
-        </div>
+
+          <p className="text-xs text-gray-500 mt-3">
+            ¿No tienes receta?{' '}
+            <a
+              href="https://wa.me/50371497972?text=Hola, quiero agendar un examen de la vista en Óptica Más Visión"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-cyan-700 hover:underline"
+            >
+              Agenda tu examen de la vista
+            </a>
+          </p>
+        </section>
       </div>
 
       <label className="flex items-start gap-3 mt-6 text-sm text-gray-600 cursor-pointer">
