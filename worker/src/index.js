@@ -49,7 +49,7 @@ import {
   deletePromoBlock,
 } from './promoBlocksDb.js'
 import { logEvent, logError } from './logger.js'
-import { requireUser, requireAdmin } from './auth.js'
+import { requireUser, requireAdmin, syncAdminFlag } from './auth.js'
 import { checkRateLimit, getClientIp, isAuthBlocked, recordAuthFailure } from './rateLimit.js'
 import { verifyUnsubscribeToken, buildUnsubscribeUrl, timingSafeEqualHex } from './tokens.js'
 import { securityHeaders, assertEnvIsConfigured } from './security.js'
@@ -647,13 +647,14 @@ async function handleListOrders(request, env, cors) {
 async function handleMe(request, env, cors) {
   const { user, errorResponse } = await authenticateOrRespond(request, env, cors)
   if (errorResponse) return errorResponse
+  const isAdmin = await syncAdminFlag(env, user)
   const row = await getUser(env, user.uid)
   return jsonResponse(
     {
       success: true,
       email: user.email,
       name: user.name,
-      isAdmin: Boolean(row?.is_admin),
+      isAdmin,
       aceptaMarketing: Boolean(row?.acepta_marketing),
     },
     200,

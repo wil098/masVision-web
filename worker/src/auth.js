@@ -32,14 +32,37 @@ export async function requireUser(request, env) {
     uid: firebaseToken.uid,
     email: firebaseToken.email ?? '',
     name: firebaseToken.name ?? '',
+    emailVerified: firebaseToken.email_verified === true,
   }
 }
 
-// Igual que requireUser, pero además exige que la cuenta tenga is_admin = 1.
+// Correos que son admin aunque todavía no tengan cuenta (ADMIN_EMAILS en
+// wrangler.toml). Solo cuenta si Google verificó que el correo es del usuario.
+export function isAdminByEmail(env, user) {
+  if (!user?.emailVerified || !user.email) return false
+  const list = String(env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  return list.includes(user.email.toLowerCase())
+}
+
+// Si el correo está en ADMIN_EMAILS, deja la marca is_admin = 1 en su cuenta
+// (para que el panel lo muestre como admin). Devuelve si el usuario es admin.
+export async function syncAdminFlag(env, user) {
+  const row = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(user.uid).first()
+  if (row?.is_admin) return true
+  if (isAdminByEmail(env, user)) {
+    await env.DB.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').bind(user.uid).run()
+    return true
+  }
+  return false
+}
+
+// Igual que requireUser, pero además exige que la cuenta sea admin.
 export async function requireAdmin(request, env) {
   const user = await requireUser(request, env)
-  const row = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(user.uid).first()
-  if (!row?.is_admin) {
+  if (!(await syncAdminFlag(env, user))) {
     throw new AuthError('No tienes permisos de administrador.', 403)
   }
   return user
