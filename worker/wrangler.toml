@@ -71,6 +71,12 @@ database_id = "7cd1e1ad-87de-4562-90f3-d322838e8651"
 binding = "IMAGES_BUCKET"
 bucket_name = "masvision-product-images"
 
+# Recetas de clientes (dato médico): bucket PRIVADO, solo accesible por el
+# Worker y descargable por el admin en /admin/orders/:id/receta.
+[[r2_buckets]]
+binding = "RECETAS_BUCKET"
+bucket_name = "masvision-recetas"
+
 # Logs estructurados visibles en el dashboard de Cloudflare (Workers & Pages
 # > masvision-order-email > Logs), no solo en tiempo real con `wrangler tail`.
 [observability]

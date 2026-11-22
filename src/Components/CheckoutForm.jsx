@@ -16,6 +16,8 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
     guardarDireccion,
     setGuardarDireccion,
     aceptaMarketing,
+    modoReceta,
+    setModoReceta,
     setAceptaMarketing,
     recetaFile,
     handleFileChange,
@@ -273,6 +275,44 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
           )}
           {errors.receta && <p className="text-red-500 text-xs mt-1">{errors.receta}</p>}
 
+          {recetaFile && (
+            <fieldset className="mt-4 space-y-2">
+              <legend className="text-sm font-semibold text-gray-900 mb-2">¿Qué quieres hacer?</legend>
+              {[
+                {
+                  value: 'cotizar',
+                  title: 'Aro + lentes: pedir cotización',
+                  text: 'No pagas ahora. Te enviamos el precio de tus lentes y pagas todo junto, una sola vez.',
+                },
+                {
+                  value: 'pagar',
+                  title: 'Solo el aro: pagar ahora',
+                  text: 'Pagas el aro ahora. Los lentes los ves después con nosotros.',
+                },
+              ].map((op) => (
+                <label
+                  key={op.value}
+                  className={`flex items-start gap-3 rounded-xl border-2 bg-white px-4 py-3 cursor-pointer transition-colors ${
+                    modoReceta === op.value ? 'border-cyan-600' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="modoReceta"
+                    value={op.value}
+                    checked={modoReceta === op.value}
+                    onChange={() => setModoReceta(op.value)}
+                    className="mt-1 accent-cyan-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-gray-900">{op.title}</span>
+                    <span className="block text-xs text-gray-500 mt-0.5 leading-relaxed">{op.text}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          )}
+
           <p className="text-xs text-gray-500 mt-3">
             ¿No tienes receta?{' '}
             <a
@@ -303,7 +343,13 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
           disabled={isSubmitting}
           className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-6 py-3.5 rounded-xl font-semibold shadow-md transition-all"
         >
-          {isSubmitting ? 'Redirigiendo a pago...' : 'Ir a pagar'}
+          {recetaFile && modoReceta === 'cotizar'
+            ? isSubmitting
+              ? 'Enviando tu receta...'
+              : 'Pedir cotización (no pagas ahora)'
+            : isSubmitting
+              ? 'Redirigiendo a pago...'
+              : 'Ir a pagar'}
         </button>
       </div>
     </form>

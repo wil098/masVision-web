@@ -84,11 +84,16 @@ export const adminRenameProductCodeSchema = z.object({
   newCodigo: codigo,
 })
 
+export const adminQuoteSchema = z.object({
+  descripcion: z.string().trim().min(3).max(300),
+  precio: z.coerce.number().finite().positive().max(10_000),
+})
+
 export const adminOrderUpdateSchema = z.object({
   courierName: z.string().trim().max(200).optional(),
   trackingNumber: z.string().trim().max(200).optional(),
   trackingUrl: z.string().trim().max(2000).optional(),
-  status: z.enum(['pendiente', 'pagado', 'fallido']).optional(),
+  status: z.enum(['pendiente', 'pagado', 'fallido', 'cotizacion', 'cotizado', 'cancelado']).optional(),
 })
 
 // Devuelve { data } o { error: string } listo para loguear y responder 400.

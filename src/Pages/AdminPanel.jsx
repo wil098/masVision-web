@@ -14,6 +14,8 @@ import {
   updateAdminOrder,
   fetchAdminCustomers,
   sendAdminTestEmail,
+  sendAdminQuote,
+  openAdminReceta,
   fetchAdminLensOptions,
   createAdminLensOption,
   updateAdminLensOption,
@@ -41,6 +43,18 @@ const STATUS_STYLES = {
   pendiente: 'bg-amber-100 text-amber-700',
   pagado: 'bg-green-100 text-green-700',
   fallido: 'bg-red-100 text-red-700',
+  cotizacion: 'bg-sky-100 text-sky-700',
+  cotizado: 'bg-cyan-100 text-cyan-800',
+  cancelado: 'bg-gray-100 text-gray-500',
+}
+
+const STATUS_LABELS = {
+  pendiente: 'Pendiente de pago',
+  pagado: 'Pagado',
+  fallido: 'Fallido',
+  cotizacion: 'Por cotizar',
+  cotizado: 'Cotización enviada',
+  cancelado: 'Cancelado',
 }
 
 const EMPTY_PRODUCT = {
@@ -655,6 +669,158 @@ function ProductsTab({ getIdToken }) {
 }
 
 /* ---------- Pedidos ---------- */
+function RecetaButton({ orderId, getIdToken }) {
+  const [error, setError] = useState(null)
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => openAdminReceta(orderId, getIdToken).catch((e) => setError(e.message))}
+        className="text-xs font-semibold text-cyan-700 hover:underline"
+      >
+        Ver receta
+      </button>
+      {error && <span className="text-xs text-red-600 ml-2">{error}</span>}
+    </div>
+  )
+}
+
+function whatsappQuoteUrl(order, total, urlPago) {
+  const digits = String(order.telefono || '').replace(/\D/g, '')
+  const phone = digits.length === 8 ? `503${digits}` : digits
+  const nombre = String(order.nombre_cliente || '').split(' ')[0]
+  const msg = `Hola ${nombre}, ya revisamos tu receta. El total de tu pedido (aro + lentes + envío) es $${Number(total).toFixed(2)}. Puedes pagarlo aquí: ${urlPago}`
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+}
+
+// Cotización de lentes: el admin escribe descripción y precio; se genera un
+// solo enlace de pago de Wompi por el total y se envía al cliente.
+function QuotePanel({ order, getIdToken, onUpdated }) {
+  const [descripcion, setDescripcion] = useState(order.lentes_descripcion || '')
+  const [precio, setPrecio] = useState(order.lentes_precio ?? '')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
+  const [sent, setSent] = useState(order.status === 'cotizado' && order.url_pago ? { urlPago: order.url_pago, total: order.total } : null)
+  const [editingQuote, setEditingQuote] = useState(order.status === 'cotizacion')
+
+  const base = Number(order.total_base ?? order.total)
+  const precioNum = Number(precio)
+  const totalPreview = Number.isFinite(precioNum) && precioNum > 0 ? base + precioNum : null
+
+  const send = async () => {
+    setError(null)
+    if (descripcion.trim().length < 3 || !(precioNum > 0)) {
+      setError('Escribe la descripción de los lentes y su precio.')
+      return
+    }
+    setSending(true)
+    try {
+      const r = await sendAdminQuote(order.id, { descripcion: descripcion.trim(), precio: precioNum }, getIdToken)
+      setSent({ urlPago: r.urlPago, total: r.total, correoEnviado: r.correoEnviado })
+      setEditingQuote(false)
+      onUpdated()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border-2 border-sky-200 bg-sky-50/60 p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-sky-900">Cotización de lentes</p>
+        {order.receta_key && <RecetaButton orderId={order.id} getIdToken={getIdToken} />}
+      </div>
+
+      {editingQuote ? (
+        <>
+          <input
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Descripción (ej. Lentes CR-39 con antirreflejo)"
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1 text-sm">
+              <span className="text-gray-500">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={precio}
+                onChange={(e) => setPrecio(e.target.value)}
+                placeholder="Precio lentes"
+                className="w-32 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              />
+            </label>
+            <p className="text-xs text-gray-600">
+              Aro + envío ${base.toFixed(2)}
+              {totalPreview !== null && (
+                <>
+                  {' '}
+                  → <strong className="text-gray-900">Total ${totalPreview.toFixed(2)}</strong>
+                </>
+              )}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {sent && (
+              <button type="button" onClick={() => setEditingQuote(false)} className="text-sm text-gray-500 font-semibold px-3 py-2">
+                Cancelar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending}
+              className="text-sm bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white font-semibold px-4 py-2 rounded-lg"
+            >
+              {sending ? 'Creando enlace de pago…' : sent ? 'Enviar nueva cotización' : 'Enviar cotización'}
+            </button>
+          </div>
+          {sent && (
+            <p className="text-[11px] text-amber-700">
+              Al enviar una nueva cotización se crea otro enlace. Pídele al cliente que use el último.
+            </p>
+          )}
+        </>
+      ) : (
+        sent && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700">
+              Enviada: <strong>{order.lentes_descripcion}</strong> · ${Number(order.lentes_precio || 0).toFixed(2)} ·{' '}
+              <strong>Total ${Number(sent.total).toFixed(2)}</strong>
+              {sent.correoEnviado === false && <span className="text-amber-700"> (el correo no salió, mándalo por WhatsApp)</span>}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={whatsappQuoteUrl(order, sent.total, sent.urlPago)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg"
+              >
+                Enviar por WhatsApp
+              </a>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(sent.urlPago)}
+                className="text-sm border border-gray-200 bg-white hover:bg-gray-50 font-semibold px-4 py-2 rounded-lg"
+              >
+                Copiar enlace de pago
+              </button>
+              <button type="button" onClick={() => setEditingQuote(true)} className="text-sm text-cyan-700 font-semibold px-2 py-2">
+                Cambiar cotización
+              </button>
+            </div>
+          </div>
+        )
+      )}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  )
+}
+
 function OrderRow({ order, getIdToken, onUpdated }) {
   const [editing, setEditing] = useState(false)
   const [courier, setCourier] = useState(order.courier_name || '')
@@ -695,11 +861,19 @@ function OrderRow({ order, getIdToken, onUpdated }) {
         </div>
         <div className="text-right shrink-0">
           <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
-            {order.status}
+            {STATUS_LABELS[order.status] ?? order.status}
           </span>
           <p className="text-sm font-bold text-gray-900 mt-1">${Number(order.total).toFixed(2)}</p>
         </div>
       </div>
+
+      {(order.status === 'cotizacion' || order.status === 'cotizado') && (
+        <QuotePanel order={order} getIdToken={getIdToken} onUpdated={onUpdated} />
+      )}
+
+      {order.receta_key && order.status !== 'cotizacion' && order.status !== 'cotizado' && (
+        <RecetaButton orderId={order.id} getIdToken={getIdToken} />
+      )}
 
       {editing ? (
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
@@ -712,6 +886,9 @@ function OrderRow({ order, getIdToken, onUpdated }) {
             <option value="pendiente">Pendiente</option>
             <option value="pagado">Pagado</option>
             <option value="fallido">Fallido</option>
+            <option value="cotizacion">Por cotizar</option>
+            <option value="cotizado">Cotización enviada</option>
+            <option value="cancelado">Cancelado</option>
           </select>
           <div className="flex gap-2 pt-1">
             <button onClick={() => setEditing(false)} className="text-sm text-gray-500 font-semibold px-3 py-1.5">
@@ -749,16 +926,16 @@ function OrdersTab({ getIdToken }) {
 
   return (
     <div>
-      <div className="flex gap-2 mb-4">
-        {['todos', 'pendiente', 'pagado', 'fallido'].map((f) => (
+      <div className="flex flex-wrap gap-2 mb-4">
+        {['todos', 'cotizacion', 'cotizado', 'pagado', 'pendiente', 'fallido', 'cancelado'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
               filter === f ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
-            {f}
+            {f === 'todos' ? 'Todos' : STATUS_LABELS[f] ?? f}
           </button>
         ))}
       </div>

@@ -67,6 +67,33 @@ export async function updateAdminOrder(orderId, updates, getIdToken) {
   )
 }
 
+export async function sendAdminQuote(orderId, { descripcion, precio }, getIdToken) {
+  return callJson(
+    `/admin/orders/${encodeURIComponent(orderId)}/cotizacion`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ descripcion, precio }) },
+    getIdToken
+  )
+}
+
+// Abre la receta (bucket privado) en una pestaña nueva usando la sesión del admin.
+export async function openAdminReceta(orderId, getIdToken) {
+  const apiBase = requireApiBase()
+  const response = await authFetch(`${apiBase}/admin/orders/${encodeURIComponent(orderId)}/receta`, { method: 'GET' }, getIdToken)
+  if (!response.ok) {
+    let message = 'No se pudo abrir la receta.'
+    try {
+      message = (await response.json()).message || message
+    } catch {
+      /* no era JSON */
+    }
+    throw new Error(message)
+  }
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export async function sendAdminTestEmail(getIdToken) {
   return callJson('/admin/test-email', { method: 'POST' }, getIdToken)
 }

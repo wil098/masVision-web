@@ -35,6 +35,8 @@ export function useCheckoutForm() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [guardarDireccion, setGuardarDireccion] = useState(true)
   const [aceptaMarketing, setAceptaMarketing] = useState(false)
+  // Con receta: 'cotizar' (aro + lentes, paga todo después) o 'pagar' (solo el aro ahora).
+  const [modoReceta, setModoReceta] = useState('cotizar')
   const [recetaFile, setRecetaFile] = useState(null)
   const [errors, setErrors] = useState({})
 
@@ -46,6 +48,7 @@ export function useCheckoutForm() {
     setShowNewAddressForm(false)
     setGuardarDireccion(true)
     setAceptaMarketing(false)
+    setModoReceta('cotizar')
     setRecetaFile(null)
     setErrors({})
   }
@@ -133,6 +136,8 @@ export function useCheckoutForm() {
     guardarDireccion,
     setGuardarDireccion,
     aceptaMarketing,
+    modoReceta,
+    setModoReceta,
     setAceptaMarketing,
     recetaFile,
     handleFileChange,

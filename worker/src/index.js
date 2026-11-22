@@ -4,6 +4,9 @@ import {
   buildShippedEmailHtml,
   buildWelcomeEmailHtml,
   buildUnsubscribePageHtml,
+  buildQuoteRequestVendorHtml,
+  buildQuoteRequestCustomerHtml,
+  buildQuoteReadyCustomerHtml,
 } from './emailTemplates.js'
 import {
   insertPendingOrder,
@@ -23,6 +26,7 @@ import {
   getOrder,
   claimOrderEmail,
   releaseOrderEmail,
+  setOrderQuote,
 } from './db.js'
 import {
   listProducts,
@@ -61,6 +65,7 @@ import {
   adminLensOptionSchema,
   adminPromoBlockSchema,
   adminOrderUpdateSchema,
+  adminQuoteSchema,
   parseSchema,
 } from './validation.js'
 
@@ -273,10 +278,14 @@ async function sendShippedEmail(env, orderRow) {
 // mientras el cliente paga, 1 hora) ya venció: así los correos salen igual,
 // solo que sin el archivo adjunto.
 function orderFromRow(row) {
+  const lentes =
+    row.lentes_precio > 0
+      ? `\nLentes: ${row.lentes_descripcion || 'según receta'} — $${Number(row.lentes_precio).toFixed(2)}`
+      : ''
   return {
     id: row.id,
     asunto: row.asunto,
-    resumen: row.resumen,
+    resumen: `${row.resumen || ''}${lentes}`,
     total: row.total,
     nombreCliente: row.nombre_cliente,
     telefono: row.telefono,
@@ -288,6 +297,22 @@ function orderFromRow(row) {
     recetaAttachment: null,
     tieneReceta: Boolean(row.tiene_receta),
     userId: row.user_id,
+  }
+}
+
+// Adjunta al correo la receta guardada en el bucket privado (si existe).
+async function loadRecetaAttachment(env, row) {
+  if (!row?.receta_key || !env.RECETAS_BUCKET) return null
+  try {
+    const obj = await env.RECETAS_BUCKET.get(row.receta_key)
+    if (!obj) return null
+    return {
+      filename: row.receta_key.split('/').pop() || 'receta',
+      content: arrayBufferToBase64(await obj.arrayBuffer()),
+    }
+  } catch (err) {
+    logError('receta_load_failed', err, { orderId: row.id })
+    return null
   }
 }
 
@@ -325,6 +350,9 @@ async function handleCheckout(request, env, cors) {
 
   const telefono = get('Telefono').trim()
   const siteUrl = get('SiteUrl')
+  // 'cotizar': el cliente subió receta y quiere aro + lentes; no paga ahora,
+  // la óptica le envía después un solo enlace por el total.
+  const modo = get('Modo') === 'cotizar' ? 'cotizar' : 'pagar'
 
   // El teléfono va al correo y a la base: solo dígitos, espacios, +, - y ().
   if (!/^[0-9+()\s-]{8,20}$/.test(telefono)) {
@@ -455,6 +483,7 @@ async function handleCheckout(request, env, cors) {
   logEvent('checkout_received', { orderId, asunto, monto, userId: user.uid })
 
   let recetaAttachment = null
+  let recetaKey = null
   if (file && typeof file.arrayBuffer === 'function' && file.size > 0) {
     if (file.size > RECETA_MAX_BYTES || !RECETA_TYPES.includes(file.type)) {
       return jsonResponse(
@@ -465,6 +494,15 @@ async function handleCheckout(request, env, cors) {
     }
     const buffer = await file.arrayBuffer()
     recetaAttachment = { filename: safeFileName(file.name, 'receta'), content: arrayBufferToBase64(buffer) }
+    // La receta (dato médico) va a un bucket privado, nunca al público de fotos.
+    if (env.RECETAS_BUCKET) {
+      recetaKey = `${orderId}/${recetaAttachment.filename}`
+      await env.RECETAS_BUCKET.put(recetaKey, buffer, { httpMetadata: { contentType: file.type } })
+    }
+  }
+
+  if (modo === 'cotizar' && !recetaAttachment) {
+    return jsonResponse({ success: false, message: 'Sube tu receta para pedir la cotización de tus lentes.' }, 400, cors)
   }
 
   const order = {
@@ -482,6 +520,34 @@ async function handleCheckout(request, env, cors) {
     recetaAttachment,
     tieneReceta: Boolean(recetaAttachment),
     userId: user.uid,
+  }
+
+  if (modo === 'cotizar') {
+    await insertPendingOrder(env, order, { status: 'cotizacion', recetaKey })
+    logEvent('quote_requested', { orderId, monto })
+    try {
+      await sendResendMessage(env, {
+        from: env.FROM_EMAIL,
+        to: env.DESTINATION_EMAIL,
+        reply_to: order.correoCliente,
+        subject: `Cotizar lentes: ${order.asunto}`,
+        html: buildQuoteRequestVendorHtml(order, { siteUrl: env.PUBLIC_SITE_URL }),
+        attachments: recetaAttachment ? [recetaAttachment] : undefined,
+      })
+    } catch (err) {
+      logError('quote_vendor_email_failed', err, { orderId })
+    }
+    try {
+      await sendResendMessage(env, {
+        from: env.FROM_EMAIL,
+        to: order.correoCliente,
+        subject: 'Recibimos tu receta · Óptica Más Visión',
+        html: buildQuoteRequestCustomerHtml(order, { siteUrl: env.PUBLIC_SITE_URL }),
+      })
+    } catch (err) {
+      logError('quote_customer_email_failed', err, { orderId })
+    }
+    return jsonResponse({ success: true, modo: 'cotizar', orderId }, 200, cors)
   }
 
   const redirectBase = siteUrl.endsWith('/') ? siteUrl : `${siteUrl}/`
@@ -503,11 +569,10 @@ async function handleCheckout(request, env, cors) {
     return jsonResponse({ success: false, message: 'No pudimos generar el enlace de pago. Intenta de nuevo en unos minutos.' }, 502, cors)
   }
 
-  // El pedido solo se guarda una vez que Wompi confirma el enlace de pago:
-  // KV cachea el archivo de la receta mientras el cliente paga (con expiración),
-  // D1 guarda el registro permanente y consultable del pedido.
-  await env.ORDERS_KV.put(orderId, JSON.stringify(order), { expirationTtl: 3600 })
-  await insertPendingOrder(env, order)
+  // El pedido solo se guarda una vez que Wompi confirma el enlace de pago.
+  // D1 guarda el registro y la receta queda en el bucket privado (ya no se
+  // usa KV aquí: ahorra escrituras del plan gratuito).
+  await insertPendingOrder(env, order, { recetaKey })
   logEvent('checkout_created', { orderId, monto })
 
   return jsonResponse({ success: true, urlEnlace, orderId }, 200, cors)
@@ -531,7 +596,9 @@ async function handleWebhook(request, env) {
     return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, {})
   }
 
-  const orderId = payload?.EnlacePago?.IdentificadorEnlaceComercio
+  // Los enlaces de cotización usan "<orderId>-q<n>"; el id son los 36
+  // caracteres del UUID.
+  const orderId = String(payload?.EnlacePago?.IdentificadorEnlaceComercio || '').slice(0, 36) || null
   const wompiTransaccionId = payload?.IdTransaccion ?? null
   const aprobado = payload?.ResultadoTransaccion === 'ExitosaAprobada'
 
@@ -564,8 +631,13 @@ async function handleWebhook(request, env) {
   // la caché ya venció, de D1 (sin adjunto). Antes, si el cliente tardaba más
   // de una hora en pagar, no salía ningún correo.
   const orderRaw = await env.ORDERS_KV.get(orderId)
-  const order = orderRaw ? JSON.parse(orderRaw) : orderFromRow(existing)
-  if (!orderRaw) logEvent('webhook_order_from_d1', { orderId })
+  let order
+  if (orderRaw) {
+    order = JSON.parse(orderRaw)
+  } else {
+    order = orderFromRow(existing)
+    order.recetaAttachment = await loadRecetaAttachment(env, existing)
+  }
 
   // claimOrderEmail marca el correo como enviado de forma atómica, así los
   // reintentos de Wompi nunca duplican correos.
@@ -925,6 +997,90 @@ async function handleAdminUpdateOrder(request, env, cors, orderId) {
   return jsonResponse({ success: true, envioNotificado }, 200, cors)
 }
 
+// El admin pone el precio de los lentes: se crea UN enlace de pago por el
+// total (aro + envío + lentes) y se le manda al cliente.
+async function handleAdminSendQuote(request, env, cors, orderId) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
+  }
+  const { data, error } = parseSchema(adminQuoteSchema, body || {})
+  if (error) {
+    return jsonResponse({ success: false, message: 'Escribe la descripción y un precio válido para los lentes.' }, 400, cors)
+  }
+
+  const row = await getOrder(env, orderId)
+  if (!row) return jsonResponse({ success: false, message: 'Pedido no encontrado.' }, 404, cors)
+  if (!['cotizacion', 'cotizado'].includes(row.status)) {
+    return jsonResponse({ success: false, message: 'Este pedido no está esperando cotización.' }, 409, cors)
+  }
+
+  const base = Number(row.total_base ?? row.total)
+  const total = Math.round((base + data.precio) * 100) / 100
+  const version = Number(row.cotizacion_version || 0) + 1
+  const siteBase = env.PUBLIC_SITE_URL.endsWith('/') ? env.PUBLIC_SITE_URL : `${env.PUBLIC_SITE_URL}/`
+  const resumen = `${row.resumen}\nLentes: ${data.descripcion} — $${data.precio.toFixed(2)}`
+
+  let urlPago
+  try {
+    const token = await getWompiToken(env)
+    ;({ urlEnlace: urlPago } = await createWompiPaymentLink(env, token, {
+      orderId: `${orderId}-q${version}`,
+      monto: total,
+      nombreProducto: `${row.asunto} + lentes`.slice(0, 500),
+      descripcion: resumen.slice(0, 500),
+      urlWebhook: `${new URL(request.url).origin}/wompi-webhook`,
+      urlRedirect: `${siteBase}?pedido=${orderId}`,
+    }))
+  } catch (err) {
+    logError('quote_payment_link_error', err, { orderId })
+    return jsonResponse({ success: false, message: 'No se pudo crear el enlace de pago en Wompi. Intenta de nuevo.' }, 502, cors)
+  }
+
+  await setOrderQuote(env, orderId, { descripcion: data.descripcion, precio: data.precio, total, urlPago, version })
+  logEvent('quote_sent', { orderId, total, version })
+
+  let correoEnviado = false
+  try {
+    await sendResendMessage(env, {
+      from: env.FROM_EMAIL,
+      to: row.correo_cliente,
+      subject: 'Tu cotización de lentes está lista · Óptica Más Visión',
+      html: buildQuoteReadyCustomerHtml(
+        { ...row, lentes_descripcion: data.descripcion, lentes_precio: data.precio, total },
+        { siteUrl: env.PUBLIC_SITE_URL, urlPago }
+      ),
+    })
+    correoEnviado = true
+  } catch (err) {
+    logError('quote_ready_email_failed', err, { orderId })
+  }
+
+  return jsonResponse({ success: true, urlPago, total, correoEnviado }, 200, cors)
+}
+
+// Descarga de la receta para el admin (el bucket es privado).
+async function handleAdminGetReceta(request, env, cors, orderId) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const row = await getOrder(env, orderId)
+  if (!row?.receta_key || !env.RECETAS_BUCKET) {
+    return jsonResponse({ success: false, message: 'Este pedido no tiene receta guardada.' }, 404, cors)
+  }
+  const obj = await env.RECETAS_BUCKET.get(row.receta_key)
+  if (!obj) return jsonResponse({ success: false, message: 'No se encontró el archivo de la receta.' }, 404, cors)
+  const headers = new Headers({ ...securityHeaders(), ...cors })
+  obj.writeHttpMetadata(headers)
+  headers.set('Cache-Control', 'private, no-store')
+  headers.set('Content-Disposition', `inline; filename="${row.receta_key.split('/').pop().replace(/"/g, '')}"`)
+  return new Response(obj.body, { headers })
+}
+
 // Manda al admin una muestra de cada correo para verificar que llegan.
 async function handleAdminTestEmail(request, env, cors) {
   const { user, errorResponse } = await authenticateAdminOrRespond(request, env, cors)
@@ -1270,6 +1426,16 @@ async function route(request, env) {
 
     if (method === 'GET' && pathname === '/admin/orders') {
       return handleAdminListOrders(request, env, cors)
+    }
+
+    if (method === 'POST' && pathname.startsWith('/admin/orders/') && pathname.endsWith('/cotizacion')) {
+      const segments = pathname.split('/')
+      return handleAdminSendQuote(request, env, cors, segments[segments.length - 2])
+    }
+
+    if (method === 'GET' && pathname.startsWith('/admin/orders/') && pathname.endsWith('/receta')) {
+      const segments = pathname.split('/')
+      return handleAdminGetReceta(request, env, cors, segments[segments.length - 2])
     }
 
     if (method === 'PUT' && pathname.startsWith('/admin/orders/')) {

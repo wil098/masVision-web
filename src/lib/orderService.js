@@ -83,7 +83,7 @@ export async function updatePreferences({ aceptaMarketing }, getIdToken) {
   return result
 }
 
-export async function createPaymentLink({ items, telefono, addressId, address, guardarDireccion, recetaFile, aceptaMarketing }, getIdToken) {
+export async function createPaymentLink({ items, telefono, addressId, address, guardarDireccion, recetaFile, aceptaMarketing, modo }, getIdToken) {
   const apiBase = requireApiBase()
 
   // El consentimiento se guarda aparte del pago: si falla, no bloquea la compra.
@@ -96,6 +96,7 @@ export async function createPaymentLink({ items, telefono, addressId, address, g
   const body = new FormData()
   body.append('Items', JSON.stringify(items))
   body.append('Telefono', telefono)
+  if (recetaFile && modo === 'cotizar') body.append('Modo', 'cotizar')
   body.append('SiteUrl', window.location.origin + import.meta.env.BASE_URL)
 
   if (addressId) {

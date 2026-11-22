@@ -6,6 +6,7 @@ import { SHIPPING_COST } from '../lib/shipping'
 import CheckoutForm from '../Components/CheckoutForm'
 import LoginGate from '../Components/LoginGate'
 import OrderConfirmation from '../Components/OrderConfirmation'
+import QuoteRequested from '../Components/QuoteRequested'
 import { useCheckoutForm } from '../hooks/useCheckoutForm'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -488,12 +489,19 @@ export default function ProductoDetalle() {
       guardarDireccion: checkout.guardarDireccion,
       recetaFile: checkout.recetaFile,
       aceptaMarketing: checkout.aceptaMarketing,
+      modo: checkout.modoReceta,
     }
 
     setIsSubmitting(true)
     try {
-      const { urlEnlace } = await createPaymentLink(orderData, getIdToken)
-      window.location.href = urlEnlace
+      const result = await createPaymentLink(orderData, getIdToken)
+      if (result.modo === 'cotizar') {
+        checkout.reset()
+        setIsSubmitting(false)
+        setStep('cotizacion')
+        return
+      }
+      window.location.href = result.urlEnlace
     } catch (err) {
       console.error('Error generando el enlace de pago:', err)
       checkout.setErrors((prev) => ({ ...prev, submit: 'No pudimos iniciar el pago. Intenta de nuevo.' }))
@@ -528,6 +536,7 @@ export default function ProductoDetalle() {
 
         <div className={step === 'detalle' ? 'px-5 sm:px-8 lg:px-10 pb-8' : 'px-6 pb-6'}>
           {step === 'confirmacion' && <OrderConfirmation onClose={() => navigate(-1)} />}
+          {step === 'cotizacion' && <QuoteRequested onClose={() => navigate('/mi-cuenta')} closeLabel="Ver mis pedidos" />}
 
           {step === 'detalle' && (
             <ProductDetails

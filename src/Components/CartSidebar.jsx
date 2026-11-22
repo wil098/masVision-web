@@ -4,6 +4,7 @@ import { X, Trash2, Plus, Minus, ShoppingBag, ChevronLeft, ShieldCheck, Truck, L
 import { useCart } from '../context/CartContext'
 import { lineUnitPrice, MAX_QTY } from '../lib/cartUtils'
 import CheckoutForm from './CheckoutForm'
+import QuoteRequested from './QuoteRequested'
 import LoginGate from './LoginGate'
 import { useCheckoutForm } from '../hooks/useCheckoutForm'
 import { useAuth } from '../context/AuthContext'
@@ -212,12 +213,20 @@ export default function CartSidebar() {
       guardarDireccion: checkout.guardarDireccion,
       recetaFile: checkout.recetaFile,
       aceptaMarketing: checkout.aceptaMarketing,
+      modo: checkout.modoReceta,
     }
 
     setIsSubmitting(true)
     try {
-      const { urlEnlace } = await createPaymentLink(orderData, getIdToken)
-      window.location.href = urlEnlace
+      const result = await createPaymentLink(orderData, getIdToken)
+      if (result.modo === 'cotizar') {
+        clearCart()
+        checkout.reset()
+        setIsSubmitting(false)
+        setStep('cotizacion')
+        return
+      }
+      window.location.href = result.urlEnlace
     } catch (err) {
       console.error('Error generando el enlace de pago:', err)
       checkout.setErrors((prev) => ({ ...prev, submit: err.message || 'No pudimos iniciar el pago. Intenta de nuevo.' }))
@@ -379,6 +388,8 @@ export default function CartSidebar() {
             )}
           </>
         )}
+
+        {step === 'cotizacion' && <QuoteRequested onClose={handleClose} />}
 
         {step === 'checkout' && (
           <div className="flex-1 overflow-y-auto">

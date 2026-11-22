@@ -96,7 +96,8 @@ export async function deleteAddress(env, addressId, userId) {
 export async function listOrdersByUser(env, userId) {
   const { results } = await env.DB.prepare(
     `SELECT id, created_at, status, asunto, resumen, total, departamento, municipio, direccion, referencia,
-            tracking_number, tracking_url, courier_name
+            tracking_number, tracking_url, courier_name, lentes_descripcion, lentes_precio,
+            CASE WHEN status = 'cotizado' THEN url_pago END AS url_pago
      FROM orders WHERE user_id = ? ORDER BY created_at DESC`
   )
     .bind(userId)
@@ -104,19 +105,20 @@ export async function listOrdersByUser(env, userId) {
   return results
 }
 
-export async function insertPendingOrder(env, order) {
+export async function insertPendingOrder(env, order, { status = 'pendiente', recetaKey = null } = {}) {
   const now = new Date().toISOString()
   await env.DB.prepare(
     `INSERT INTO orders (
       id, created_at, updated_at, status, asunto, resumen, total,
       nombre_cliente, telefono, correo_cliente, departamento, municipio,
-      direccion, referencia, tiene_receta, user_id
-    ) VALUES (?, ?, ?, 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      direccion, referencia, tiene_receta, user_id, total_base, receta_key
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       order.id,
       now,
       now,
+      status,
       order.asunto,
       order.resumen,
       order.total,
@@ -128,8 +130,20 @@ export async function insertPendingOrder(env, order) {
       order.direccion,
       order.referencia || null,
       order.tieneReceta ? 1 : 0,
-      order.userId
+      order.userId,
+      order.total,
+      recetaKey
     )
+    .run()
+}
+
+// Guarda la cotización de lentes y el enlace de pago por el total.
+export async function setOrderQuote(env, orderId, { descripcion, precio, total, urlPago, version }) {
+  await env.DB.prepare(
+    `UPDATE orders SET status = 'cotizado', lentes_descripcion = ?, lentes_precio = ?, total = ?, url_pago = ?,
+       cotizacion_version = ?, updated_at = ? WHERE id = ?`
+  )
+    .bind(descripcion, precio, total, urlPago, version, new Date().toISOString(), orderId)
     .run()
 }
 

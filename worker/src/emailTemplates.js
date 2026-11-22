@@ -213,6 +213,83 @@ export function unsubscribeFooter(unsubscribeUrl) {
   return `<p style="margin:0;">Recibes este correo porque aceptaste novedades de ${BRAND}. <a href="${escapeHtml(url)}" style="color:#9ca3af;">Darme de baja</a></p>`
 }
 
+/* ---------- Al dueño: nueva solicitud de cotización ---------- */
+export function buildQuoteRequestVendorHtml(order, { siteUrl } = {}) {
+  const site = safeUrl(siteUrl)?.replace(/\/$/, '') || ''
+  const bodyHtml = `
+    <p style="margin:0 0 20px 0;color:#374151;font-size:15px;line-height:1.6;">Un cliente quiere <strong>aro + lentes</strong>. La receta va adjunta. Entra al panel, en Pedidos, escribe el precio de los lentes y toca <strong>Enviar cotización</strong>: el cliente recibirá un solo enlace para pagar todo.</p>
+    <p style="margin:0 0 4px 0;color:#6b7280;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Pedido #${escapeHtml(shortId(order.id))}</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 8px 0;">${resumenToHtml(order.resumen)}</table>
+    <p style="margin:0 0 20px 0;color:#111827;font-size:14px;">Aro + envío: <strong>${escapeHtml(money(order.total))}</strong> (falta sumar los lentes)</p>
+    <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin:0 0 20px 0;font-size:14px;color:#111827;line-height:1.7;">
+      <strong>Cliente:</strong> ${escapeHtml(order.nombreCliente)}<br>
+      <strong>Teléfono:</strong> ${escapeHtml(order.telefono)}<br>
+      <strong>Correo:</strong> ${escapeHtml(order.correoCliente)}
+    </div>
+    ${shippingAddressHtml(order)}
+    ${site ? `<div style="text-align:center;">${button('Abrir el panel', `${site}/admin`)}</div>` : ''}
+  `
+  return emailLayout({
+    preheader: `${order.nombreCliente} pide cotización de lentes`,
+    heading: 'Nueva solicitud de cotización',
+    subheading: order.asunto,
+    bodyHtml,
+    siteUrl,
+  })
+}
+
+/* ---------- Al cliente: recibimos tu receta ---------- */
+export function buildQuoteRequestCustomerHtml(order, { siteUrl } = {}) {
+  const nombre = String(order.nombreCliente || '').split(' ')[0] || ''
+  const site = safeUrl(siteUrl)?.replace(/\/$/, '') || ''
+  const bodyHtml = `
+    <p style="margin:0 0 20px 0;color:#374151;font-size:15px;line-height:1.6;">${nombre ? `¡Hola ${escapeHtml(nombre)}! ` : ''}Recibimos tu receta y tu pedido. Nuestro equipo va a revisar tu graduación y te enviaremos la cotización de tus lentes <strong>por correo y WhatsApp</strong>.</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px 0;">
+      <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;color:#374151;">1. &nbsp;Revisamos tu receta</td></tr>
+      <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;color:#374151;">2. &nbsp;Te enviamos el precio de tus lentes con un enlace de pago</td></tr>
+      <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;color:#374151;">3. &nbsp;Pagas todo junto (aro + lentes + envío), una sola vez</td></tr>
+    </table>
+    <p style="margin:0 0 4px 0;color:#6b7280;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Pedido #${escapeHtml(shortId(order.id))}</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px 0;">${resumenToHtml(order.resumen)}</table>
+    <p style="margin:0 0 24px 0;color:#6b7280;font-size:13px;line-height:1.6;">Todavía no has pagado nada. Si no te convence la cotización, no tienes que hacer nada más.</p>
+    ${site ? `<div style="text-align:center;">${button('Ver mi pedido', `${site}/mi-cuenta`)}</div>` : ''}
+  `
+  return emailLayout({
+    preheader: 'Te enviaremos la cotización de tus lentes',
+    heading: 'Recibimos tu receta',
+    subheading: order.asunto,
+    bodyHtml,
+    siteUrl,
+  })
+}
+
+/* ---------- Al cliente: cotización lista, paga todo de una ---------- */
+export function buildQuoteReadyCustomerHtml(row, { siteUrl, urlPago } = {}) {
+  const nombre = String(row.nombre_cliente || '').split(' ')[0] || ''
+  const base = Number(row.total) - Number(row.lentes_precio || 0)
+  const bodyHtml = `
+    <p style="margin:0 0 20px 0;color:#374151;font-size:15px;line-height:1.6;">${nombre ? `¡Hola ${escapeHtml(nombre)}! ` : ''}Revisamos tu receta. Esta es la cotización de tu pedido completo:</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 8px 0;">
+      ${resumenToHtml(row.resumen)}
+      <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;color:#0e7490;font-size:14px;line-height:1.5;font-weight:700;">Lentes: ${escapeHtml(row.lentes_descripcion)} — ${escapeHtml(money(row.lentes_precio))}</td></tr>
+    </table>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 24px 0;">
+      <tr><td style="padding:4px 0;color:#6b7280;font-size:13px;">Aro + envío</td><td style="padding:4px 0;color:#6b7280;font-size:13px;text-align:right;">${escapeHtml(money(base))}</td></tr>
+      <tr><td style="padding:4px 0;color:#6b7280;font-size:13px;">Lentes</td><td style="padding:4px 0;color:#6b7280;font-size:13px;text-align:right;">${escapeHtml(money(row.lentes_precio))}</td></tr>
+      <tr><td style="padding:8px 0;color:#111827;font-size:15px;font-weight:700;">Total a pagar</td><td style="padding:8px 0;color:#111827;font-size:20px;font-weight:800;text-align:right;">${escapeHtml(money(row.total))}</td></tr>
+    </table>
+    ${urlPago ? `<div style="text-align:center;margin:0 0 16px 0;">${button('Pagar mi pedido', urlPago)}</div>` : ''}
+    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;text-align:center;">Un solo pago con tarjeta, seguro a través de Wompi. Si tienes dudas sobre tus lentes, escríbenos por WhatsApp.</p>
+  `
+  return emailLayout({
+    preheader: `Total ${money(row.total)} · aro + lentes + envío`,
+    heading: 'Tu cotización está lista',
+    subheading: row.asunto,
+    bodyHtml,
+    siteUrl,
+  })
+}
+
 /* ---------- Página simple de confirmación de baja ---------- */
 export function buildUnsubscribePageHtml({ ok, siteUrl }) {
   const site = safeUrl(siteUrl)

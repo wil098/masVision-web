@@ -11,12 +11,18 @@ const STATUS_STYLES = {
   pendiente: 'bg-amber-100 text-amber-700',
   pagado: 'bg-green-100 text-green-700',
   fallido: 'bg-red-100 text-red-700',
+  cotizacion: 'bg-sky-100 text-sky-700',
+  cotizado: 'bg-cyan-600 text-white',
+  cancelado: 'bg-gray-100 text-gray-500',
 }
 
 const STATUS_LABELS = {
   pendiente: 'Pendiente de pago',
   pagado: 'Pagado',
   fallido: 'Pago fallido',
+  cotizacion: 'Revisando tu receta',
+  cotizado: 'Cotización lista',
+  cancelado: 'Cancelado',
 }
 
 const EMPTY_ADDRESS = { etiqueta: '', departamento: '', municipio: '', direccion: '', referencia: '' }
@@ -52,12 +58,32 @@ function OrdersSection({ getIdToken }) {
             </span>
           </div>
           <pre className="text-sm text-gray-600 whitespace-pre-wrap font-sans mb-3">{order.resumen}</pre>
+          {order.lentes_precio > 0 && (
+            <p className="text-sm font-semibold text-cyan-800 mb-3">
+              Lentes: {order.lentes_descripcion} — ${Number(order.lentes_precio).toFixed(2)}
+            </p>
+          )}
           <div className="flex items-center justify-between text-sm border-t border-gray-100 pt-3">
             <span className="text-gray-500">
               Envío: {order.municipio}, {order.departamento}
             </span>
-            <span className="font-bold text-gray-900">${Number(order.total).toFixed(2)}</span>
+            <span className="font-bold text-gray-900">
+              {order.status === 'cotizacion' ? 'Aro + envío: ' : ''}${Number(order.total).toFixed(2)}
+            </span>
           </div>
+          {order.status === 'cotizacion' && (
+            <p className="mt-3 rounded-xl bg-sky-50 text-sky-800 px-4 py-2.5 text-sm">
+              Estamos revisando tu receta. Te enviaremos la cotización de tus lentes por correo y WhatsApp.
+            </p>
+          )}
+          {order.status === 'cotizado' && order.url_pago && (
+            <a
+              href={order.url_pago}
+              className="mt-3 flex items-center justify-center gap-2 rounded-full bg-gray-900 hover:bg-cyan-700 text-white font-semibold px-5 py-3 transition-colors"
+            >
+              Pagar ${Number(order.total).toFixed(2)} (aro + lentes + envío)
+            </a>
+          )}
           {order.tracking_number && (
             <div className="mt-3 flex items-center gap-2 bg-cyan-50 text-cyan-700 rounded-xl px-4 py-2.5 text-sm">
               <Truck size={16} className="shrink-0" />
