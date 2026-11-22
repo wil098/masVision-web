@@ -11,7 +11,7 @@ export default function ArosOftalmicos() {
       image="Eclipse-Collection-05.JPG"
       imagePosition="center 60%"
       path="/aros-oftalmicos"
-      seoDescription="Aros oftálmicos Gildi en metal, titanio y TN75+ desde $34.99. Elige color y medida, compra en línea y recibe en todo El Salvador."
+      seoDescription="Aros oftálmicos Gildi en metal, titanio y TN75+ desde $75. Elige color y medida, compra en línea y recibe en todo El Salvador."
     />
   )
 }
