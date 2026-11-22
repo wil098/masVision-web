@@ -8,7 +8,7 @@ const env = Object.fromEntries(
     .filter((l) => l.includes('=') && !l.trim().startsWith('#'))
     .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()])
 )
-const SITE_URL = (process.env.VITE_SITE_URL || env.VITE_SITE_URL || 'https://wil098.github.io/masVision-web').replace(/\/$/, '')
+const SITE_URL = (process.env.VITE_SITE_URL || env.VITE_SITE_URL || 'https://opticamasvision.com').replace(/\/$/, '')
 const API = process.env.VITE_ORDER_API_BASE || env.VITE_ORDER_API_BASE
 
 const today = new Date().toISOString().slice(0, 10)

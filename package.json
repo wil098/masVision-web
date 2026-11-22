@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "predeploy": "GH_PAGES=1 vite build && cp dist/index.html dist/404.html && node scripts/generate-seo-files.mjs",
-    "deploy": "gh-pages -d dist"
+    "predeploy": "vite build && node scripts/generate-seo-files.mjs",
+    "deploy": "cd worker && npx wrangler pages deploy ../dist --project-name masvision-comingsoon --branch main --commit-dirty=true"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",

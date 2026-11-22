@@ -406,6 +406,15 @@ async function handleCheckout(request, env, cors) {
     )
   }
 
+  // Envío fijo por pedido (no por artículo) a todo el país, definido en
+  // wrangler.toml. Se suma aquí para que el navegador no pueda omitirlo.
+  const costoEnvio = Number(env.COSTO_ENVIO ?? 0)
+  if (Number.isFinite(costoEnvio) && costoEnvio > 0) {
+    monto += costoEnvio
+    resumenLines.push(`Envío a domicilio — $${costoEnvio.toFixed(2)}`)
+  }
+  monto = Math.round(monto * 100) / 100
+
   if (!Number.isFinite(monto) || monto <= 0) {
     return jsonResponse({ success: false, message: 'No se pudo calcular el total del pedido.' }, 400, cors)
   }

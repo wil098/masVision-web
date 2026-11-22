@@ -1,7 +1,8 @@
 import { usePageMeta, SITE_URL } from '../lib/seo'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar, Info, ShoppingCart, Zap } from 'lucide-react'
+import { ChevronLeft, Circle, MoveHorizontal, Ruler, Calendar, Info, ShoppingCart, Zap, Truck } from 'lucide-react'
+import { SHIPPING_COST } from '../lib/shipping'
 import CheckoutForm from '../Components/CheckoutForm'
 import LoginGate from '../Components/LoginGate'
 import OrderConfirmation from '../Components/OrderConfirmation'
@@ -122,6 +123,9 @@ function ProductDetails({
           ) : (
             esAroOftalmico && <p className="text-sm text-gray-500 mt-1">Precio solo del aro, no incluye lentes</p>
           )}
+          <p className="inline-flex items-center gap-1.5 text-sm text-gray-600 mt-2">
+            <Truck size={15} className="text-cyan-700" /> Envío de ${SHIPPING_COST.toFixed(2)} a todo El Salvador
+          </p>
         </div>
 
         {/* Aviso: la tienda vende el aro; los lentes graduados se cotizan aparte con la receta. */}

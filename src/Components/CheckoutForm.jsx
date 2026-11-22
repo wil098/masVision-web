@@ -56,7 +56,7 @@ export default function CheckoutForm({ user, checkout, onSubmit, isSubmitting })
 
         <div className="pt-2 border-t border-gray-100">
           <p className="text-sm font-semibold text-gray-800 mb-3">Dirección de envío</p>
-          <p className="text-xs text-gray-500 mb-3">Hacemos envíos a todo El Salvador.</p>
+          <p className="text-xs text-gray-500 mb-3">Envío de $6.00 por pedido a todo El Salvador.</p>
 
           {addressesLoading && <p className="text-sm text-gray-400">Cargando tus direcciones...</p>}
 

@@ -15,9 +15,12 @@ WOMPI_API_BASE_URL = "https://api.wompi.sv"
 PROJECT_ID = "masvision-web"
 PUBLIC_JWK_CACHE_KEY = "firebase-public-jwk-cache"
 # URL pública de la tienda (logo y enlaces en los correos) y de este Worker
-# (enlace de baja de marketing). Cambiar al pasar a opticamasvision.com.
-PUBLIC_SITE_URL = "https://wil098.github.io/masVision-web/"
+# (enlace de baja de marketing).
+PUBLIC_SITE_URL = "https://opticamasvision.com/"
 PUBLIC_API_URL = "https://masvision-order-email.wilfredoangel1.workers.dev"
+# Envío fijo por pedido a todo el país, en dólares. Debe coincidir con
+# SHIPPING_COST en src/lib/shipping.js del sitio.
+COSTO_ENVIO = "6"
 
 # El secreto UNSUBSCRIBE_SECRET (firma de enlaces de baja) se configura con
 # `wrangler secret put UNSUBSCRIBE_SECRET`.

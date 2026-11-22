@@ -1,7 +1,7 @@
 import { Truck, Eye, MapPin, ShieldCheck } from 'lucide-react'
 
 const ITEMS = [
-  { icon: Truck, title: 'Envíos a todo El Salvador', text: 'Recibe tus lentes en casa' },
+  { icon: Truck, title: 'Envíos a todo El Salvador', text: 'Solo $6 por pedido, a tu casa' },
   { icon: Eye, title: 'Exámenes de la vista', text: 'Optometristas profesionales' },
   { icon: MapPin, title: '4 sucursales', text: 'San Vicente, Zacatecoluca y Cojutepeque' },
   { icon: ShieldCheck, title: 'Pago seguro', text: 'Paga en línea con total confianza' },

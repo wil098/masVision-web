@@ -9,6 +9,7 @@ import { useCheckoutForm } from '../hooks/useCheckoutForm'
 import { useAuth } from '../context/AuthContext'
 import { createPaymentLink } from '../lib/orderService'
 import { useBodyScrollLock, useEscapeKey } from '../hooks/useOverlay'
+import { SHIPPING_COST } from '../lib/shipping'
 
 const money = (n) => `$${n.toFixed(2)}`
 
@@ -191,6 +192,8 @@ export default function CartSidebar() {
 
   if (!isCartOpen) return null
 
+  const totalConEnvio = cartTotal + SHIPPING_COST
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!checkout.validate()) return
@@ -344,9 +347,13 @@ export default function CartSidebar() {
                       <dd className="tabular-nums">{money(cartLensTotal)}</dd>
                     </div>
                   )}
+                  <div className="flex justify-between text-gray-600">
+                    <dt>Envío a todo El Salvador</dt>
+                    <dd className="tabular-nums">{money(SHIPPING_COST)}</dd>
+                  </div>
                   <div className="flex justify-between items-baseline pt-2 border-t border-gray-100 mt-2">
                     <dt className="font-bold text-gray-900">Total</dt>
-                    <dd className="text-2xl font-extrabold text-gray-900 tabular-nums">{money(cartTotal)}</dd>
+                    <dd className="text-2xl font-extrabold text-gray-900 tabular-nums">{money(totalConEnvio)}</dd>
                   </div>
                 </dl>
 
@@ -362,7 +369,7 @@ export default function CartSidebar() {
 
                 <ul className="grid grid-cols-2 gap-2 text-[11px] text-gray-500">
                   <li className="flex items-center gap-1.5">
-                    <Truck size={14} className="text-cyan-700 shrink-0" /> Envíos a todo El Salvador
+                    <Truck size={14} className="text-cyan-700 shrink-0" /> Envío de {money(SHIPPING_COST)} a todo el país
                   </li>
                   <li className="flex items-center gap-1.5">
                     <ShieldCheck size={14} className="text-cyan-700 shrink-0" /> Pago seguro en línea
@@ -397,9 +404,9 @@ export default function CartSidebar() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">
-                  {cartCount} {cartCount === 1 ? 'artículo' : 'artículos'}
+                  {cartCount} {cartCount === 1 ? 'artículo' : 'artículos'} + envío {money(SHIPPING_COST)}
                 </span>
-                <span className="font-extrabold text-gray-900 tabular-nums">{money(cartTotal)}</span>
+                <span className="font-extrabold text-gray-900 tabular-nums">{money(totalConEnvio)}</span>
               </div>
             </div>
 
