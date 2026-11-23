@@ -290,8 +290,53 @@ export function buildQuoteReadyCustomerHtml(row, { siteUrl, urlPago } = {}) {
   })
 }
 
+/* ---------- Al cliente: recordatorio de carrito abandonado ---------- */
+export function buildCartReminderHtml({ nombre, items, total, siteUrl, unsubscribeUrl }) {
+  const first = String(nombre || '').split(' ')[0] || ''
+  const site = safeUrl(siteUrl)?.replace(/\/$/, '') || ''
+  const rows = items
+    .slice(0, 6)
+    .map((it) => {
+      const img = safeUrl(it.image)
+      const detalle = [it.color, it.medida ? `Medida ${it.medida}` : '', it.quantity > 1 ? `x${it.quantity}` : '']
+        .filter(Boolean)
+        .join(' · ')
+      return `<tr>
+        <td style="padding:12px 12px 12px 0;border-bottom:1px solid #eef0f3;width:88px;vertical-align:middle;">
+          ${img ? `<img src="${escapeHtml(img)}" alt="" width="80" style="width:80px;height:auto;border-radius:12px;background:#f3f4f6;display:block;">` : ''}
+        </td>
+        <td style="padding:12px 0;border-bottom:1px solid #eef0f3;vertical-align:middle;">
+          <p style="margin:0;color:#111827;font-size:14px;font-weight:700;">${escapeHtml(it.name)}</p>
+          ${detalle ? `<p style="margin:4px 0 0 0;color:#6b7280;font-size:12px;">${escapeHtml(detalle)}</p>` : ''}
+        </td>
+        <td style="padding:12px 0 12px 12px;border-bottom:1px solid #eef0f3;text-align:right;vertical-align:middle;color:#111827;font-size:14px;font-weight:700;white-space:nowrap;">${escapeHtml(money(it.price * it.quantity))}</td>
+      </tr>`
+    })
+    .join('')
+  const bodyHtml = `
+    <p style="margin:0 0 20px 0;color:#374151;font-size:15px;line-height:1.6;">${first ? `¡Hola ${escapeHtml(first)}! ` : ''}Vimos que dejaste estos aros en tu carrito. Los guardamos para que puedas terminar tu compra cuando quieras:</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 12px 0;">${rows}</table>
+    <p style="margin:0 0 24px 0;text-align:right;color:#111827;font-size:15px;">Subtotal: <strong>${escapeHtml(money(total))}</strong> <span style="color:#6b7280;font-size:13px;">+ envío</span></p>
+    ${site ? `<div style="text-align:center;margin:0 0 16px 0;">${button('Volver a mi carrito', `${site}/?carrito=1`)}</div>` : ''}
+    <div style="text-align:center;margin:0 0 8px 0;">
+      <a href="${WHATSAPP_URL}?text=${encodeURIComponent('Hola, tengo una duda sobre los aros que dejé en mi carrito')}" style="display:inline-block;color:#047857;background-color:#ecfdf5;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;">¿Tienes dudas? Escríbenos por WhatsApp</a>
+    </div>
+    <p style="margin:16px 0 0 0;color:#6b7280;font-size:13px;line-height:1.6;text-align:center;">Te ayudamos a elegir color, medida o con tus lentes graduados.</p>
+  `
+  const url = safeUrl(unsubscribeUrl)
+  return emailLayout({
+    preheader: 'Tus aros te están esperando',
+    heading: 'Dejaste algo en tu carrito 👓',
+    bodyHtml,
+    siteUrl,
+    footerExtraHtml: url
+      ? `<p style="margin:0;"><a href="${escapeHtml(url)}" style="color:#9ca3af;">No quiero recibir recordatorios del carrito</a></p>`
+      : '',
+  })
+}
+
 /* ---------- Página simple de confirmación de baja ---------- */
-export function buildUnsubscribePageHtml({ ok, siteUrl }) {
+export function buildUnsubscribePageHtml({ ok, siteUrl, tipo = 'marketing' }) {
   const site = safeUrl(siteUrl)
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${BRAND}</title></head>
 <body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f3f4f6;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px;">
@@ -299,7 +344,9 @@ export function buildUnsubscribePageHtml({ ok, siteUrl }) {
 <h1 style="margin:0 0 8px 0;font-size:22px;color:${DARK};">${ok ? 'Listo, te dimos de baja' : 'Enlace no válido'}</h1>
 <p style="margin:0 0 20px 0;color:#6b7280;font-size:15px;line-height:1.6;">${
     ok
-      ? 'Ya no recibirás correos de ofertas y novedades. Seguirás recibiendo los avisos de tus pedidos.'
+      ? tipo === 'carrito'
+        ? 'Ya no te enviaremos recordatorios de tu carrito. Seguirás recibiendo los avisos de tus pedidos.'
+        : 'Ya no recibirás correos de ofertas y novedades. Seguirás recibiendo los avisos de tus pedidos.'
       : 'Este enlace de baja no es válido o está incompleto. Puedes cambiar tus preferencias desde Mi cuenta.'
   }</p>
 ${site ? `<a href="${escapeHtml(site)}" style="color:${BRAND_COLOR};font-weight:700;text-decoration:none;">Volver a la tienda</a>` : ''}

@@ -49,11 +49,12 @@ export async function verifyUnsubscribeToken(env, uid, token) {
 }
 
 // URL pública del enlace de baja (la sirve este mismo Worker).
-export async function buildUnsubscribeUrl(env, uid) {
+export async function buildUnsubscribeUrl(env, uid, tipo = 'marketing') {
   const token = await unsubscribeToken(env, uid)
   if (!token || !env.PUBLIC_API_URL) return null
   const url = new URL('/api/baja', env.PUBLIC_API_URL)
   url.searchParams.set('u', uid)
   url.searchParams.set('t', token)
+  if (tipo !== 'marketing') url.searchParams.set('tipo', tipo)
   return url.toString()
 }

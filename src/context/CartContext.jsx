@@ -1,6 +1,37 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { buildCartLine, needsVariantChoice } from '../lib/productUtils'
 import { lineIdOf, lineUnitPrice, MAX_QTY } from '../lib/cartUtils'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
+import { fetchServerCart, saveServerCart } from '../lib/orderService'
+
+// Formato compacto que se guarda en el servidor.
+const toServerLine = (l) => ({
+  codigo: l.codigo,
+  name: l.name,
+  brand: l.brand || '',
+  price: l.price,
+  image: l.image || '',
+  color: l.color?.nombre || '',
+  colorHex: l.color?.hex || '',
+  medida: l.medida || '',
+  quantity: l.quantity,
+})
+
+const fromServerLine = (s) => {
+  const line = {
+    codigo: s.codigo,
+    name: s.name,
+    brand: s.brand,
+    price: Number(s.price),
+    image: s.image || null,
+    color: s.color ? { nombre: s.color, hex: s.colorHex || null } : null,
+    medida: s.medida || '',
+    lensOptions: [],
+    quantity: s.quantity,
+  }
+  return { ...line, lineId: lineIdOf(line) }
+}
 
 const CartContext = createContext()
 
@@ -44,6 +75,10 @@ function loadInitialCart() {
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(loadInitialCart)
+  const { user, getIdToken } = useAuth()
+  const [serverReady, setServerReady] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [quickAddProduct, setQuickAddProduct] = useState(null)
   const [lastAdded, setLastAdded] = useState({ id: null, at: 0 })
@@ -74,6 +109,49 @@ export const CartProvider = ({ children }) => {
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
+
+  // Al iniciar sesión: si este navegador no tiene carrito, se recupera el
+  // guardado en el servidor (por ejemplo, desde otro dispositivo).
+  useEffect(() => {
+    setServerReady(false)
+    if (!user) return
+    let cancelled = false
+    fetchServerCart(getIdToken)
+      .then((items) => {
+        if (cancelled || !items.length) return
+        setCart((curr) => (curr.length ? curr : items.map(fromServerLine)))
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setServerReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid])
+
+  // Copia el carrito al servidor (con pausa, para no mandar cada clic). Es
+  // lo que permite el recordatorio de carrito abandonado.
+  useEffect(() => {
+    if (!user || !serverReady) return
+    const t = setTimeout(() => {
+      saveServerCart(cart.map(toServerLine), getIdToken).catch(() => {})
+    }, 1500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, user?.uid, serverReady])
+
+  // El botón "Volver a mi carrito" del correo abre el carrito (?carrito=1).
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('carrito') === '1') {
+      setIsCartOpen(true)
+      params.delete('carrito')
+      const qs = params.toString()
+      navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true })
+    }
+  }, [location.search, location.pathname, navigate])
 
   const openCart = useCallback(() => setIsCartOpen(true), [])
   const closeCart = useCallback(() => setIsCartOpen(false), [])

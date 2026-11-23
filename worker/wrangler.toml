@@ -81,3 +81,7 @@ bucket_name = "masvision-recetas"
 # > masvision-order-email > Logs), no solo en tiempo real con `wrangler tail`.
 [observability]
 enabled = true
+
+# Revisión de carritos abandonados (recordatorio por correo), cada hora.
+[triggers]
+crons = ["17 * * * *"]

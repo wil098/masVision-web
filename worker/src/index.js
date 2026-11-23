@@ -7,6 +7,7 @@ import {
   buildQuoteRequestVendorHtml,
   buildQuoteRequestCustomerHtml,
   buildQuoteReadyCustomerHtml,
+  buildCartReminderHtml,
 } from './emailTemplates.js'
 import {
   insertPendingOrder,
@@ -53,6 +54,7 @@ import {
   deletePromoBlock,
 } from './promoBlocksDb.js'
 import { logEvent, logError } from './logger.js'
+import { getCart, saveCart, deleteCart, listAbandonedCarts, claimCartReminder, releaseCartReminder, setCartReminderOptIn } from './cartsDb.js'
 import { requireUser, requireAdmin, syncAdminFlag } from './auth.js'
 import { checkRateLimit, getClientIp, isAuthBlocked, recordAuthFailure } from './rateLimit.js'
 import {
@@ -72,6 +74,7 @@ import {
   adminPromoBlockSchema,
   adminOrderUpdateSchema,
   adminQuoteSchema,
+  cartSchema,
   parseSchema,
 } from './validation.js'
 
@@ -530,6 +533,7 @@ async function handleCheckout(request, env, cors) {
 
   if (modo === 'cotizar') {
     await insertPendingOrder(env, order, { status: 'cotizacion', recetaKey })
+    await deleteCart(env, user.uid)
     logEvent('quote_requested', { orderId, monto })
     try {
       await sendResendMessage(env, {
@@ -579,6 +583,7 @@ async function handleCheckout(request, env, cors) {
   // D1 guarda el registro y la receta queda en el bucket privado (ya no se
   // usa KV aquí: ahorra escrituras del plan gratuito).
   await insertPendingOrder(env, order, { recetaKey })
+  await deleteCart(env, user.uid)
   logEvent('checkout_created', { orderId, monto })
 
   return jsonResponse({ success: true, urlEnlace, orderId }, 200, cors)
@@ -740,6 +745,28 @@ async function handleMe(request, env, cors) {
   )
 }
 
+async function handleGetCart(request, env, cors) {
+  const { user, errorResponse } = await authenticateOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const cart = await getCart(env, user.uid)
+  return jsonResponse({ success: true, items: cart?.items || [] }, 200, cors)
+}
+
+async function handleSaveCart(request, env, cors) {
+  const { user, errorResponse } = await authenticateOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors)
+  }
+  const { data, error } = parseSchema(cartSchema, body || {})
+  if (error) return jsonResponse({ success: false, message: 'Carrito inválido.' }, 400, cors)
+  await saveCart(env, user.uid, data.items)
+  return jsonResponse({ success: true }, 200, cors)
+}
+
 async function handleUpdatePreferences(request, env, cors) {
   const { user, errorResponse } = await authenticateOrRespond(request, env, cors)
   if (errorResponse) return errorResponse
@@ -763,12 +790,18 @@ async function handleUnsubscribe(request, env) {
   const url = new URL(request.url)
   const uid = url.searchParams.get('u') || ''
   const token = url.searchParams.get('t') || ''
+  const tipo = url.searchParams.get('tipo') === 'carrito' ? 'carrito' : 'marketing'
   const ok = uid && token && (await verifyUnsubscribeToken(env, uid, token))
   if (ok) {
-    await setMarketingConsent(env, uid, false)
-    logEvent('marketing_unsubscribed', { userId: uid })
+    if (tipo === 'carrito') {
+      await setCartReminderOptIn(env, uid, false)
+      logEvent('cart_reminder_unsubscribed', { userId: uid })
+    } else {
+      await setMarketingConsent(env, uid, false)
+      logEvent('marketing_unsubscribed', { userId: uid })
+    }
   }
-  return new Response(buildUnsubscribePageHtml({ ok: Boolean(ok), siteUrl: env.PUBLIC_SITE_URL }), {
+  return new Response(buildUnsubscribePageHtml({ ok: Boolean(ok), siteUrl: env.PUBLIC_SITE_URL, tipo }), {
     status: ok ? 200 : 400,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
@@ -1337,7 +1370,49 @@ function rateLimitBucketFor(method, pathname) {
   return 'general'
 }
 
+// Cron (cada hora, ver [triggers] en wrangler.toml): recordatorio de
+// carrito abandonado, un correo por carrito, 24 h después del último cambio.
+async function sendCartReminders(env) {
+  const carts = await listAbandonedCarts(env, { minHours: 24, maxDays: 7, limit: 40 })
+  let enviados = 0
+  for (const c of carts) {
+    if (!(await claimCartReminder(env, c.user_id, c.updated_at))) continue
+    let items = []
+    try {
+      items = JSON.parse(c.items)
+    } catch {
+      continue
+    }
+    if (!items.length) continue
+    try {
+      await sendResendMessage(env, {
+        from: env.FROM_EMAIL,
+        to: c.email,
+        subject: 'Tus aros te están esperando · Óptica Más Visión',
+        html: buildCartReminderHtml({
+          nombre: c.nombre,
+          items,
+          total: c.total,
+          siteUrl: env.PUBLIC_SITE_URL,
+          unsubscribeUrl: await buildUnsubscribeUrl(env, c.user_id, 'carrito'),
+        }),
+      })
+      enviados++
+    } catch (err) {
+      await releaseCartReminder(env, c.user_id)
+      logError('cart_reminder_failed', err, { userId: c.user_id })
+    }
+  }
+  if (carts.length) logEvent('cart_reminders_run', { candidatos: carts.length, enviados })
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      sendCartReminders(env).catch((err) => logError('cart_reminders_cron_failed', err, {}))
+    )
+  },
+
   async fetch(request, env) {
     try {
       return await route(request, env)
@@ -1422,6 +1497,14 @@ async function route(request, env) {
 
     if (method === 'GET' && pathname === '/api/me') {
       return handleMe(request, env, cors)
+    }
+
+    if (method === 'GET' && pathname === '/api/carrito') {
+      return handleGetCart(request, env, cors)
+    }
+
+    if (method === 'PUT' && pathname === '/api/carrito') {
+      return handleSaveCart(request, env, cors)
     }
 
     if (method === 'PUT' && pathname === '/api/me/preferencias') {

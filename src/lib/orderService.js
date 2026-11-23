@@ -80,6 +80,25 @@ export async function fetchOrderView(orderId, token) {
   return result.pedido
 }
 
+// Carrito guardado en el servidor (solo con sesión): permite el recordatorio
+// de carrito abandonado y recuperarlo en otro dispositivo.
+export async function fetchServerCart(getIdToken) {
+  const apiBase = requireApiBase()
+  const response = await authFetch(`${apiBase}/api/carrito`, { method: 'GET' }, getIdToken)
+  const result = await response.json()
+  if (!result.success) throw new Error(result.message || 'No se pudo leer el carrito.')
+  return result.items || []
+}
+
+export async function saveServerCart(items, getIdToken) {
+  const apiBase = requireApiBase()
+  await authFetch(
+    `${apiBase}/api/carrito`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) },
+    getIdToken
+  )
+}
+
 export async function updatePreferences({ aceptaMarketing }, getIdToken) {
   const apiBase = requireApiBase()
   const response = await authFetch(

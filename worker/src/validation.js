@@ -84,6 +84,22 @@ export const adminRenameProductCodeSchema = z.object({
   newCodigo: codigo,
 })
 
+const cartLineSchema = z.object({
+  codigo,
+  name: z.string().trim().min(1).max(200),
+  brand: optionalText(100),
+  price: z.coerce.number().finite().nonnegative().max(100_000),
+  image: z.preprocess((v) => (typeof v === 'string' && /^https:\/\//.test(v) ? v : ''), z.string().max(2000)),
+  color: optionalText(100),
+  medida: optionalText(100),
+  colorHex: optionalText(20),
+  quantity: z.coerce.number().int().min(1).max(50),
+})
+
+export const cartSchema = z.object({
+  items: z.array(cartLineSchema).max(50),
+})
+
 export const adminQuoteSchema = z.object({
   descripcion: z.string().trim().min(3).max(300),
   precio: z.coerce.number().finite().positive().max(10_000),
