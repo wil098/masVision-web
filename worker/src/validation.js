@@ -80,6 +80,49 @@ export const adminPromoBlockSchema = z.object({
   coleccion: optionalText(200),
 })
 
+// Enlaces del botón del slide: rutas internas ("/aros-sol") o https://.
+const heroLink = z.preprocess(
+  (v) => (typeof v === 'string' ? v : ''),
+  z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^\/(?!\/)/.test(v) || /^https:\/\//.test(v), 'Enlace inválido')
+)
+// Imagen: URL https (subida al bucket) o ruta del propio sitio ("/img/...").
+const heroImage = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine((v) => /^https:\/\//.test(v) || /^\/(?!\/)/.test(v), 'Imagen inválida')
+const isoDay = z.preprocess(
+  (v) => (typeof v === 'string' ? v : ''),
+  z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/)
+)
+
+export const adminHeroSlideSchema = z
+  .object({
+    eyebrow: optionalText(80),
+    title: optionalText(120),
+    subtitle: optionalText(300),
+    image: heroImage,
+    image_movil: z.preprocess((v) => (typeof v === 'string' ? v : ''), z.union([z.literal(''), heroImage])),
+    boton_texto: optionalText(40),
+    boton_link: heroLink,
+    mostrar_texto: z.boolean().default(true),
+    enfoque: z.enum(['izquierda', 'centro', 'derecha']).default('centro'),
+    position: z.coerce.number().int().positive().max(1000),
+    activo: z.boolean().default(true),
+    fecha_inicio: isoDay,
+    fecha_fin: isoDay,
+  })
+  // Con texto visible el título es obligatorio; sin texto, la imagen lo trae.
+  .refine((s) => !s.mostrar_texto || s.title.length > 0, { message: 'Falta el título', path: ['title'] })
+  .refine((s) => !s.fecha_inicio || !s.fecha_fin || s.fecha_inicio <= s.fecha_fin, {
+    message: 'La fecha de fin es anterior a la de inicio',
+    path: ['fecha_fin'],
+  })
+
 export const adminRenameProductCodeSchema = z.object({
   newCodigo: codigo,
 })

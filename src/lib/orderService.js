@@ -55,6 +55,17 @@ export async function fetchPromoBlocks(pagina) {
   return result.promoBlocks
 }
 
+// Slides del carrusel de la portada: solo los activos y vigentes hoy, en orden.
+export async function fetchHeroSlides() {
+  const apiBase = requireApiBase()
+  const response = await fetch(`${apiBase}/api/hero-slides`)
+  const result = await response.json()
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo cargar la portada.')
+  }
+  return result.slides
+}
+
 // Opciones de lente (filtro, marca, etc.) activas y con precio definido.
 // Vacío hasta que el admin cargue precios reales — el llamador debe tratar
 // una lista vacía como "no mostrar personalización de lente".

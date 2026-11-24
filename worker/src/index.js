@@ -53,6 +53,15 @@ import {
   updatePromoBlock,
   deletePromoBlock,
 } from './promoBlocksDb.js'
+import {
+  HERO_MAX_VISIBLE,
+  listVisibleHeroSlides,
+  listAllHeroSlidesForAdmin,
+  countHeroSlides,
+  createHeroSlide,
+  updateHeroSlide,
+  deleteHeroSlide,
+} from './heroSlidesDb.js'
 import { logEvent, logError } from './logger.js'
 import { getCart, saveCart, deleteCart, listAbandonedCarts, claimCartReminder, releaseCartReminder, setCartReminderOptIn } from './cartsDb.js'
 import { requireUser, requireAdmin, syncAdminFlag } from './auth.js'
@@ -72,6 +81,7 @@ import {
   adminRenameProductCodeSchema,
   adminLensOptionSchema,
   adminPromoBlockSchema,
+  adminHeroSlideSchema,
   adminOrderUpdateSchema,
   adminQuoteSchema,
   cartSchema,
@@ -845,6 +855,84 @@ async function handleGetPromoBlocks(request, env, cors) {
   return jsonResponse({ success: true, promoBlocks }, 200, cors)
 }
 
+async function handleGetHeroSlides(request, env, cors) {
+  const slides = await listVisibleHeroSlides(env)
+  return jsonResponse({ success: true, slides }, 200, cors)
+}
+
+// Tope de slides guardados (activos + programados + apagados), para que la
+// tabla no crezca sin control. En portada se muestran HERO_MAX_VISIBLE.
+const HERO_MAX_STORED = 12
+
+async function handleAdminListHeroSlides(request, env, cors) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const slides = await listAllHeroSlidesForAdmin(env)
+  return jsonResponse({ success: true, slides, maxVisible: HERO_MAX_VISIBLE, maxStored: HERO_MAX_STORED }, 200, cors)
+}
+
+async function readHeroSlideBody(request, cors, endpoint) {
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return { errorResponse: jsonResponse({ success: false, message: 'JSON inválido.' }, 400, cors) }
+  }
+  const { data, error } = parseSchema(adminHeroSlideSchema, body)
+  if (error) {
+    logEvent('validation_rejected', { endpoint, error })
+    return {
+      errorResponse: jsonResponse(
+        { success: false, message: 'Revisa el slide: falta la imagen o el título, o un enlace o fecha no es válido.' },
+        400,
+        cors
+      ),
+    }
+  }
+  return { data }
+}
+
+async function handleAdminCreateHeroSlide(request, env, cors) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const { data, errorResponse: bodyError } = await readHeroSlideBody(request, cors, 'admin_hero_slide_create')
+  if (bodyError) return bodyError
+  if ((await countHeroSlides(env)) >= HERO_MAX_STORED) {
+    return jsonResponse(
+      { success: false, message: `Máximo ${HERO_MAX_STORED} slides guardados. Elimina alguno que ya no uses.` },
+      400,
+      cors
+    )
+  }
+  const id = await createHeroSlide(env, data)
+  logEvent('admin_hero_slide_created', { id })
+  return jsonResponse({ success: true, id }, 201, cors)
+}
+
+async function handleAdminUpdateHeroSlide(request, env, cors, id) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const { data, errorResponse: bodyError } = await readHeroSlideBody(request, cors, 'admin_hero_slide_update')
+  if (bodyError) return bodyError
+  const updated = await updateHeroSlide(env, id, data)
+  if (!updated) {
+    return jsonResponse({ success: false, message: 'Slide no encontrado.' }, 404, cors)
+  }
+  logEvent('admin_hero_slide_updated', { id })
+  return jsonResponse({ success: true }, 200, cors)
+}
+
+async function handleAdminDeleteHeroSlide(request, env, cors, id) {
+  const { errorResponse } = await authenticateAdminOrRespond(request, env, cors)
+  if (errorResponse) return errorResponse
+  const deleted = await deleteHeroSlide(env, id)
+  if (!deleted) {
+    return jsonResponse({ success: false, message: 'Slide no encontrado.' }, 404, cors)
+  }
+  logEvent('admin_hero_slide_deleted', { id })
+  return jsonResponse({ success: true }, 200, cors)
+}
+
 async function handleGetImage(env, pathname) {
   const key = decodeURIComponent(pathname.replace('/images/', ''))
   const object = await env.IMAGES_BUCKET.get(key)
@@ -1535,6 +1623,10 @@ async function route(request, env) {
       return handleGetPromoBlocks(request, env, cors)
     }
 
+    if (method === 'GET' && pathname === '/api/hero-slides') {
+      return handleGetHeroSlides(request, env, cors)
+    }
+
     if (method === 'GET' && pathname === '/admin/products') {
       return handleAdminListProducts(request, env, cors)
     }
@@ -1596,6 +1688,22 @@ async function route(request, env) {
 
     if (method === 'DELETE' && pathname.startsWith('/admin/lens-options/')) {
       return handleAdminDeleteLensOption(request, env, cors, Number(pathname.split('/').pop()))
+    }
+
+    if (method === 'GET' && pathname === '/admin/hero-slides') {
+      return handleAdminListHeroSlides(request, env, cors)
+    }
+
+    if (method === 'POST' && pathname === '/admin/hero-slides') {
+      return handleAdminCreateHeroSlide(request, env, cors)
+    }
+
+    if (method === 'PUT' && pathname.startsWith('/admin/hero-slides/')) {
+      return handleAdminUpdateHeroSlide(request, env, cors, Number(pathname.split('/').pop()))
+    }
+
+    if (method === 'DELETE' && pathname.startsWith('/admin/hero-slides/')) {
+      return handleAdminDeleteHeroSlide(request, env, cors, Number(pathname.split('/').pop()))
     }
 
     if (method === 'GET' && pathname === '/admin/promo-blocks') {

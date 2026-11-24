@@ -152,3 +152,27 @@ export async function updateAdminPromoBlock(id, promoBlock, getIdToken) {
 export async function deleteAdminPromoBlock(id, getIdToken) {
   return callJson(`/admin/promo-blocks/${id}`, { method: 'DELETE' }, getIdToken)
 }
+
+export async function fetchAdminHeroSlides(getIdToken) {
+  return callJson('/admin/hero-slides', { method: 'GET' }, getIdToken)
+}
+
+export async function createAdminHeroSlide(slide, getIdToken) {
+  return callJson(
+    '/admin/hero-slides',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slide) },
+    getIdToken
+  )
+}
+
+export async function updateAdminHeroSlide(id, slide, getIdToken) {
+  return callJson(
+    `/admin/hero-slides/${id}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slide) },
+    getIdToken
+  )
+}
+
+export async function deleteAdminHeroSlide(id, getIdToken) {
+  return callJson(`/admin/hero-slides/${id}`, { method: 'DELETE' }, getIdToken)
+}

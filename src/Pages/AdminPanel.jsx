@@ -1,6 +1,6 @@
 import { usePageMeta } from '../lib/seo'
 import { useEffect, useState } from 'react'
-import { Package, ShoppingBag, Users, Plus, Trash2, Pencil, X, Upload, SlidersHorizontal, Image } from 'lucide-react'
+import { Package, ShoppingBag, Users, Plus, Trash2, Pencil, X, Upload, SlidersHorizontal, Image, GalleryHorizontalEnd } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import LoginGate from '../Components/LoginGate'
 import {
@@ -24,6 +24,10 @@ import {
   createAdminPromoBlock,
   updateAdminPromoBlock,
   deleteAdminPromoBlock,
+  fetchAdminHeroSlides,
+  createAdminHeroSlide,
+  updateAdminHeroSlide,
+  deleteAdminHeroSlide,
 } from '../lib/adminService'
 
 const TABS = [
@@ -31,6 +35,7 @@ const TABS = [
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
   { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'lentes', label: 'Lentes', icon: SlidersHorizontal },
+  { id: 'portada', label: 'Portada', icon: GalleryHorizontalEnd },
   { id: 'promos', label: 'Promos', icon: Image },
 ]
 
@@ -1509,6 +1514,481 @@ function PromoBlocksTab({ getIdToken }) {
   )
 }
 
+/* ---------- Portada (carrusel de Inicio) ---------- */
+
+const EMPTY_HERO_SLIDE = {
+  eyebrow: 'Óptica Más Visión',
+  title: '',
+  subtitle: '',
+  image: '',
+  image_movil: '',
+  boton_texto: 'Ver catálogo',
+  boton_link: '/aros-oftalmicos',
+  mostrar_texto: true,
+  enfoque: 'centro',
+  position: 1,
+  activo: true,
+  fecha_inicio: '',
+  fecha_fin: '',
+}
+
+const HERO_LINKS = [
+  { value: '/aros-oftalmicos', label: 'Aros Oftálmicos' },
+  { value: '/aros-de-sol', label: 'Aros de Sol' },
+  { value: '/examenes-de-la-vista', label: 'Exámenes de la vista' },
+  { value: '/sucursales', label: 'Sucursales' },
+]
+
+const HERO_ENFOQUES = [
+  { value: 'izquierda', label: 'Izquierda' },
+  { value: 'centro', label: 'Centro' },
+  { value: 'derecha', label: 'Derecha' },
+]
+
+// Igual que el servidor: fecha de hoy en El Salvador (UTC-6).
+function todaySV() {
+  return new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+function formatDay(day) {
+  if (!day) return ''
+  const [y, m, d] = day.split('-')
+  return `${d}/${m}/${y}`
+}
+
+// Estado del slide según activo y fechas (sin contar el tope de 5).
+function heroSlideStatus(slide, today) {
+  if (!slide.activo) return { label: 'Apagado', className: 'bg-gray-100 text-gray-500' }
+  if (slide.fecha_inicio && slide.fecha_inicio > today)
+    return { label: `Programado desde ${formatDay(slide.fecha_inicio)}`, className: 'bg-amber-50 text-amber-700' }
+  if (slide.fecha_fin && slide.fecha_fin < today)
+    return { label: `Terminó el ${formatDay(slide.fecha_fin)}`, className: 'bg-gray-100 text-gray-500' }
+  return { label: 'Visible', className: 'bg-emerald-50 text-emerald-700' }
+}
+
+function HeroImageField({ label, help, value, onChange, getIdToken, onError, optional }) {
+  const [uploading, setUploading] = useState(false)
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    onError(null)
+    try {
+      onChange(await uploadAdminImage(file, getIdToken))
+    } catch (err) {
+      onError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+      {help && <p className="text-[11px] text-gray-400 mb-2">{help}</p>}
+      {value && (
+        <div className="w-full max-w-xs aspect-[2/1] rounded-lg border border-gray-200 overflow-hidden mb-2 bg-gray-50">
+          <img src={value} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="flex gap-2">
+        <label className="inline-flex items-center gap-2 px-3 py-2 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 rounded-lg text-xs font-semibold cursor-pointer">
+          <Upload size={14} />
+          {uploading ? 'Subiendo...' : value ? 'Cambiar imagen' : 'Subir imagen'}
+          <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} className="hidden" />
+        </label>
+        {optional && value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="px-3 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-xs font-semibold"
+          >
+            Quitar
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Vista previa aproximada de cómo se verá el slide en la portada.
+function HeroSlidePreview({ slide }) {
+  if (!slide.image) return null
+  const pos = { izquierda: '35% center', centro: 'center', derecha: '65% center' }[slide.enfoque] || 'center'
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-600 mb-1">Vista previa (escritorio)</p>
+      <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden bg-slate-950">
+        <img src={slide.image} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: pos }} />
+        {slide.mostrar_texto && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/40 to-transparent" />
+            <div className="absolute inset-y-0 left-0 w-1/2 flex flex-col justify-center p-4 sm:p-6 text-white">
+              {slide.eyebrow && (
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-cyan-300 mb-1">{slide.eyebrow}</p>
+              )}
+              <p className="text-xl sm:text-3xl font-extrabold uppercase tracking-tighter leading-[0.9] mb-2">
+                {slide.title || 'Título'}
+              </p>
+              {slide.subtitle && <p className="text-[10px] sm:text-xs text-slate-200 line-clamp-2">{slide.subtitle}</p>}
+              <div className="flex gap-1.5 mt-2">
+                <span className="bg-cyan-500 text-slate-950 text-[9px] font-bold px-2 py-1 rounded-full">Agendar cita</span>
+                {slide.boton_texto && slide.boton_link && (
+                  <span className="border border-white/40 text-white text-[9px] font-semibold px-2 py-1 rounded-full">
+                    {slide.boton_texto}
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function HeroSlideForm({ initial, defaultPosition, onCancel, onSaved, getIdToken }) {
+  const isEditing = Boolean(initial)
+  const [form, setForm] = useState(
+    initial ? { ...EMPTY_HERO_SLIDE, ...initial } : { ...EMPTY_HERO_SLIDE, position: defaultPosition }
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  const set = (name, value) => setForm((prev) => ({ ...prev, [name]: value }))
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    set(name, type === 'checkbox' ? checked : value)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!form.image) return setError('Sube la imagen principal.')
+    if (form.mostrar_texto && !form.title.trim()) return setError('Escribe el título (o desactiva "Mostrar texto").')
+    const link = form.boton_link.trim()
+    if (link && !/^\/(?!\/)/.test(link) && !/^https:\/\//.test(link)) {
+      return setError('El enlace debe empezar con "/" (página del sitio) o con "https://".')
+    }
+    if (form.fecha_inicio && form.fecha_fin && form.fecha_inicio > form.fecha_fin) {
+      return setError('La fecha de fin es anterior a la de inicio.')
+    }
+
+    const payload = {
+      eyebrow: form.eyebrow,
+      title: form.title,
+      subtitle: form.subtitle,
+      image: form.image,
+      image_movil: form.image_movil,
+      boton_texto: form.boton_texto,
+      boton_link: link,
+      mostrar_texto: Boolean(form.mostrar_texto),
+      enfoque: form.enfoque,
+      position: Number(form.position) || 1,
+      activo: Boolean(form.activo),
+      fecha_inicio: form.fecha_inicio,
+      fecha_fin: form.fecha_fin,
+    }
+
+    setSaving(true)
+    try {
+      if (isEditing) await updateAdminHeroSlide(initial.id, payload, getIdToken)
+      else await createAdminHeroSlide(payload, getIdToken)
+      onSaved()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const input = 'w-full rounded-xl border border-gray-200 px-3 py-2 text-sm'
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+      <h3 className="text-base font-bold text-gray-900">{isEditing ? 'Editar slide' : 'Nuevo slide de portada'}</h3>
+
+      <HeroImageField
+        label="Imagen principal (computadora)"
+        help="Horizontal, ideal 2400 × 1000 px. Deja libre la franja de arriba (ahí va el menú) y no pongas texto importante en los bordes: se recorta según el tamaño de pantalla."
+        value={form.image}
+        onChange={(url) => set('image', url)}
+        getIdToken={getIdToken}
+        onError={setError}
+      />
+
+      <HeroImageField
+        label="Imagen para celular (opcional)"
+        help="Vertical, ideal 1080 × 1600 px. Si no subes una, en celular se usa la principal recortada."
+        value={form.image_movil}
+        onChange={(url) => set('image_movil', url)}
+        getIdToken={getIdToken}
+        onError={setError}
+        optional
+      />
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Al recortar la foto, conservar el lado</label>
+        <select name="enfoque" value={form.enfoque} onChange={handleChange} className={input}>
+          {HERO_ENFOQUES.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-[11px] text-gray-400 mt-1">
+          Elige el lado donde está lo importante de la foto (por ejemplo, la persona).
+        </p>
+      </div>
+
+      <label className="flex items-start gap-3 rounded-xl border border-gray-200 p-3 cursor-pointer">
+        <input type="checkbox" name="mostrar_texto" checked={form.mostrar_texto} onChange={handleChange} className="mt-0.5" />
+        <span>
+          <span className="block text-sm font-semibold text-gray-800">Mostrar texto y botones sobre la imagen</span>
+          <span className="block text-[11px] text-gray-500">
+            Desactívalo si la imagen ya trae su propio diseño con texto (por ejemplo, un banner de Black Friday hecho en
+            Canva). En ese caso toda la imagen se vuelve un enlace al botón de abajo.
+          </span>
+        </span>
+      </label>
+
+      {form.mostrar_texto && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Texto pequeño de arriba (opcional)</label>
+            <input name="eyebrow" value={form.eyebrow} onChange={handleChange} maxLength={80} placeholder="Ej. Solo este fin de semana" className={input} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Título</label>
+            <input name="title" value={form.title} onChange={handleChange} maxLength={120} placeholder="Ej. Black Friday" className={input} />
+            <p className="text-[11px] text-gray-400 mt-1">Se muestra en mayúsculas. Mientras más corto, más grande se ve.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Subtítulo (opcional)</label>
+            <textarea name="subtitle" value={form.subtitle} onChange={handleChange} maxLength={300} rows={2} placeholder="Ej. Hasta 40% de descuento en aros seleccionados." className={input} />
+          </div>
+        </div>
+      )}
+
+      {!form.mostrar_texto && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Descripción de la imagen (opcional)</label>
+          <input name="title" value={form.title} onChange={handleChange} maxLength={120} placeholder="Ej. Black Friday: 40% de descuento" className={input} />
+          <p className="text-[11px] text-gray-400 mt-1">No se ve en la página; ayuda a Google y a personas con lector de pantalla.</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Texto del botón</label>
+          <input name="boton_texto" value={form.boton_texto} onChange={handleChange} maxLength={40} placeholder="Ej. Ver ofertas" className={input} />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">El botón lleva a</label>
+          <input name="boton_link" value={form.boton_link} onChange={handleChange} list="hero-links" placeholder="/aros-de-sol" className={input} />
+          <datalist id="hero-links">
+            {HERO_LINKS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </datalist>
+        </div>
+      </div>
+      <p className="text-[11px] text-gray-400 -mt-3">
+        Una página del sitio (empieza con "/", por ejemplo /aros-de-sol o /producto/CODIGO) o un enlace completo con https://.
+        El botón "Agendar cita" siempre aparece.
+      </p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Orden</label>
+          <input name="position" type="number" min="1" value={form.position} onChange={handleChange} className={input} />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Mostrar desde</label>
+          <input name="fecha_inicio" type="date" value={form.fecha_inicio} onChange={handleChange} className={input} />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Hasta (incluido)</label>
+          <input name="fecha_fin" type="date" value={form.fecha_fin} onChange={handleChange} className={input} />
+        </div>
+        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 sm:pt-5">
+          <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} />
+          Activo
+        </label>
+      </div>
+      <p className="text-[11px] text-gray-400 -mt-3">Fechas opcionales. Sin fechas, el slide se muestra mientras esté activo.</p>
+
+      <HeroSlidePreview slide={form} />
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div className="flex gap-2 pt-2">
+        <button type="button" onClick={onCancel} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex-1 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm"
+        >
+          {saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear slide'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function HeroSlidesTab({ getIdToken }) {
+  const [slides, setSlides] = useState([])
+  const [limits, setLimits] = useState({ maxVisible: 5, maxStored: 12 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [editing, setEditing] = useState(null) // null | 'new' | slide
+  const [busyId, setBusyId] = useState(null)
+
+  const load = () => {
+    setLoading(true)
+    fetchAdminHeroSlides(getIdToken)
+      .then((result) => {
+        setSlides(result.slides)
+        setLimits({ maxVisible: result.maxVisible, maxStored: result.maxStored })
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDelete = async (slide) => {
+    if (!window.confirm(`¿Eliminar el slide "${slide.title || 'sin título'}"?`)) return
+    setBusyId(slide.id)
+    setError(null)
+    try {
+      await deleteAdminHeroSlide(slide.id, getIdToken)
+      setSlides((prev) => prev.filter((s) => s.id !== slide.id))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleToggle = async (slide) => {
+    setBusyId(slide.id)
+    setError(null)
+    try {
+      const updated = { ...slide, activo: !slide.activo }
+      await updateAdminHeroSlide(slide.id, updated, getIdToken)
+      setSlides((prev) => prev.map((s) => (s.id === slide.id ? updated : s)))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  if (editing) {
+    return (
+      <HeroSlideForm
+        initial={editing === 'new' ? null : editing}
+        defaultPosition={slides.reduce((max, s) => Math.max(max, s.position), 0) + 1}
+        onCancel={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null)
+          load()
+        }}
+        getIdToken={getIdToken}
+      />
+    )
+  }
+
+  const today = todaySV()
+  // Los primeros maxVisible vigentes son los que de verdad salen en portada.
+  let shown = 0
+  const rows = slides.map((s) => {
+    const status = heroSlideStatus(s, today)
+    const vigente = status.label === 'Visible'
+    const enPortada = vigente && shown < limits.maxVisible
+    if (enPortada) shown += 1
+    return { slide: s, status: vigente && !enPortada ? { label: `Fuera (máx. ${limits.maxVisible})`, className: 'bg-red-50 text-red-600' } : status }
+  })
+
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-4">
+        Imágenes del carrusel grande de la página de Inicio. Se muestran hasta {limits.maxVisible} a la vez, en el orden
+        indicado, y cambian solas cada 7 segundos. Con fechas puedes programar una promoción (por ejemplo, Black Friday)
+        para que aparezca y desaparezca sola.
+      </p>
+
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-gray-500">
+          {shown} en portada · {slides.length} guardados
+        </p>
+        <button
+          onClick={() => setEditing('new')}
+          disabled={slides.length >= limits.maxStored}
+          className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-semibold"
+        >
+          <Plus size={16} /> Nuevo slide
+        </button>
+      </div>
+
+      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+      {loading ? (
+        <p className="text-sm text-gray-400">Cargando...</p>
+      ) : slides.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          No hay slides. Mientras tanto la portada muestra la imagen de "Nueva colección" que viene por defecto.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(({ slide: s, status }) => (
+            <div key={s.id} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <span className="w-6 text-center text-sm font-bold text-gray-400">{s.position}</span>
+              <div className="w-24 aspect-[2/1] rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <img src={s.image} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-800 truncate">{s.title || 'Sin título (imagen con diseño propio)'}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${status.className}`}>{status.label}</span>
+                  {s.fecha_fin && s.fecha_fin >= today && (
+                    <span className="text-[11px] text-gray-400">hasta {formatDay(s.fecha_fin)}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggle(s)}
+                disabled={busyId === s.id}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-50"
+              >
+                {s.activo ? 'Apagar' : 'Encender'}
+              </button>
+              <button onClick={() => setEditing(s)} className="p-2 text-gray-400 hover:text-cyan-600 transition-colors" aria-label="Editar">
+                <Pencil size={18} />
+              </button>
+              <button
+                onClick={() => handleDelete(s)}
+                disabled={busyId === s.id}
+                className="p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                aria-label="Eliminar"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ---------- Componente principal ---------- */
 function TestEmailButton({ getIdToken }) {
   const [state, setState] = useState('idle') // idle | sending | done | error
@@ -1596,6 +2076,7 @@ export default function AdminPanel() {
         {tab === 'pedidos' && <OrdersTab getIdToken={getIdToken} />}
         {tab === 'clientes' && <CustomersTab getIdToken={getIdToken} />}
         {tab === 'lentes' && <LensOptionsTab getIdToken={getIdToken} />}
+        {tab === 'portada' && <HeroSlidesTab getIdToken={getIdToken} />}
         {tab === 'promos' && <PromoBlocksTab getIdToken={getIdToken} />}
       </div>
     </section>
