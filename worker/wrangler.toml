@@ -23,7 +23,7 @@ PUBLIC_API_URL = "https://masvision-order-email.wilfredoangel1.workers.dev"
 COSTO_ENVIO = "6"
 # Correos con acceso al panel de administración (separados por coma). Quedan
 # como admin la primera vez que inician sesión con Google.
-ADMIN_EMAILS = "wilfredoangel1@gmail.com,ubaldobaires@gmail.com"
+ADMIN_EMAILS = "wilfredoangel1@gmail.com,ubaldobaires@gmail.com,armandorenderos709@gmail.com"
 
 # El secreto UNSUBSCRIBE_SECRET (firma de enlaces de baja) se configura con
 # `wrangler secret put UNSUBSCRIBE_SECRET`.
